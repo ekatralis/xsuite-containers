@@ -8,7 +8,7 @@ WORKDIR /home/xsuiteuser
 
 # Install system dependencies while still in root 
 RUN apt-get update && \
-    apt-get install -y wget bzip2 ca-certificates curl git && \
+    apt-get install -y wget bzip2 ca-certificates curl git gcc && \
     rm -rf /var/lib/apt/lists/*
 
 RUN chown -R xsuiteuser:xsuiteuser /home/xsuiteuser
@@ -33,6 +33,7 @@ SHELL ["conda", "run", "-n", "xsuite", "/bin/bash", "-c"]
 
 # Install pip packages (example)
 RUN conda run -n xsuite pip install xsuite["full_env"]
+RUN conda run -n xsuite pip install xwakes h5py
 RUN mkdir -p /home/xsuiteuser/.packages && \
     cd /home/xsuiteuser/.packages && \
     git clone https://github.com/xsuite/xobjects && \
