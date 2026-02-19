@@ -8,7 +8,8 @@ WORKDIR /home/xsuiteuser
 
 # Install system dependencies while still in root 
 RUN apt-get update && \
-    apt-get install -y wget bzip2 ca-certificates curl git gcc && \
+    apt-get install -y wget bzip2 ca-certificates curl \ 
+		       git gcc libopenmpi-dev openmpi-bin && \
     rm -rf /var/lib/apt/lists/*
 
 RUN chown -R xsuiteuser:xsuiteuser /home/xsuiteuser
@@ -32,8 +33,8 @@ RUN conda create -y -n xsuite python=3.11 && \
 SHELL ["conda", "run", "-n", "xsuite", "/bin/bash", "-c"]
 
 # Install pip packages (example)
-RUN conda run -n xsuite pip install xsuite["full_env"]
-RUN conda run -n xsuite pip install xwakes h5py
+RUN conda run -n xsuite pip install xsuite["full_env"]==0.45.5
+RUN conda run -n xsuite pip install xwakes['tests'] h5py mpi4py
 RUN mkdir -p /home/xsuiteuser/.packages && \
     cd /home/xsuiteuser/.packages && \
     git clone https://github.com/xsuite/xobjects && \
