@@ -1,5 +1,16 @@
 This README servers as preliminary documentation for how to run the container in a consistent fashion accross different OSes.
 ## Preliminary tests
+### Installing podman
+Podman can be downloaded and installed from the website:
+```bash
+https://podman.io
+```
+On linux it can also be installed via package managers.
+### Pulling the container
+The container can be pulled using:
+```bash
+docker/podman pull registry.cern.ch/ekatrali/xsuite-containers/xsuite-jupyter
+```
 ### Tests on Ubuntu using docker
 Jupyterlab was working on Ubuntu out-of-the-box by simply building the container inside this repository and running:
 ```bash
