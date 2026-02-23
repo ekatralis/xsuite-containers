@@ -12,7 +12,8 @@ RUN apt-get update && \
 		       git gcc libopenmpi-dev openmpi-bin && \
     rm -rf /var/lib/apt/lists/*
 
-RUN chown -R xsuiteuser:xsuiteuser /home/xsuiteuser
+RUN chown -R xsuiteuser:xsuiteuser /home/xsuiteuser && \
+    chmod 2775 /home/xsuiteuser
 # Switch to user for Miniforge setup and subsequent steps
 USER xsuiteuser
 

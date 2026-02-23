@@ -35,9 +35,9 @@ podman run --rm -it   -p 8888:8888   -v  name-of-folder:/workspace  xsuite-test-
 ```
 Then by visiting the `127.0.0.0` ip everything was working correctly
 ### Tests on macOS
-Weirdly enough macOS is the most quirky one so far due to permission conflicts. I am able to fix the mounted drive permissions conflicts by running the container in this way, but this breaks access to the container file system
+Running on macOS seems to work best by setting the home directory to be group-writeable, so that we can run as the macOS user to preserve read-write access to the workspace without breaking software inside the container.
 ```bash
-podman run --rm -it   --user 501:20   -v /Users/vkatralis/Documents/CERN/git/JUAS2026WorkshopStudents:/workspace   xsuite-test-build
+podman run --rm -it   --user 501:20 --group-add 1001  -v /Users/vkatralis/Documents/CERN/git/JUAS2026WorkshopStudents:/workspace   xsuite-test-build
 ```
 Things to do:
 - Debug permission issues
