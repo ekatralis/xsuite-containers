@@ -1,8 +1,12 @@
 FROM ubuntu:24.04
 
-# Non-root user for safety UID and GID outside of normal range to avoid conflicts with host users
-# Not fixing UID/GID, supposed to use --user when running container to map to host user
-RUN useradd -m -s /bin/bash xsuiteuser
+# Non-root user for safety UID and GID outside of typical range to avoid conflicts with host users
+# Supposed to use --user when running container to map to host user
+ARG UID=2020
+ARG GID=2020
+
+RUN groupadd -g ${GID} xsuiteuser \
+ && useradd -m -u ${UID} -g ${GID} -s /bin/bash xsuiteuser
 
 WORKDIR /home/xsuiteuser
 

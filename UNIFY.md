@@ -8,5 +8,8 @@ podman build --arch amd64 -t xsuite-test-build .
 ```
 ## How to run
 ```bash
-podman run --rm -it   --user $(id -u):$(id -g) --group-add 1001  -v /Users/vkatralis/Documents/CERN/git/JUAS2026WorkshopStudents:/workspace   xsuite-test-build
+# On MacOS
+podman run --rm -it   --user $(id -u):$(id -g) --group-add 2020  -v /Users/vkatralis/Documents/CERN/git/JUAS2026WorkshopStudents:/workspace   xsuite-test-build
+# On Linux/Windows
+podman run --rm -it   --userns=keep-id  -v /home/evangeloskatralis/Documents/git/CAS-Transverse-Beam-Dynamics:/workspace   xsuite-test-build
 ```
