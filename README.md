@@ -1,1 +1,50 @@
-# Xsuite Containers
+# Xsuite Container Repository
+
+This repository provides Docker/Podman container definitions to create consistent tutorial environments for Jupyter notebooks used in xsuite workshops and tutorials.
+
+**Purpose:** Provide a repeatable, cross-platform container that ships a conda-based `xsuite` environment and can be run interactively to host Jupyter Lab sessions for tutorials.
+
+## Prerequisites
+- Install Podman or Docker. Podman is recommended for preserving user permissions.
+- For multi-arch builds, enable QEMU / buildx (see examples below).
+
+## Run Jupyter Notebooks inside container
+Pull the container from ghcr
+```bash
+command-to-be-added
+```
+### Linux 
+When running `podman` on Linux, we must first determine whether we are running in rootless mode
+```bash
+podman info --format '{{.Host.Security.Rootless}}'
+```
+If this command returns `true` then we podman is running in `rootless` mode. If it returns `false`, podman is running in `rootful` mode. Depending on the mode, a different command needs to be used to preserve permissions inside the container.
+
+For `rootless` run the container using:
+```bash
+podman run --rm -it --userns=keep-id  -v /PATH/TO/NOTEBOOKS:/workspace -p 8888:8888   -v /PATH/TO/NOTEBOOKS:/workspace  xsuite-test-build   bash -lc 'source /home/xsuiteuser/miniforge3/etc/profile.d/conda.sh && conda activate xsuite && exec jupyter lab --ip=0.0.0.0 --no-browser --notebook-dir=/workspace'
+```
+For `rootful` mode, run the container using
+```bash
+podman run --rm --group-add=$(id -g) -it -p 8888:8888   -v /PATH/TO/NOTEBOOKS:/workspace  xsuite-test-build   bash -lc 'source /home/xsuiteuser/miniforge3/etc/profile.d/conda.sh && conda activate xsuite && exec jupyter lab --ip=0.0.0.0 --no-browser --notebook-dir=/workspace'
+```
+For `Docker` the command is the same as `podman` in `rootful` mode.
+### macOS
+On macOS, `podman` runs a Linux VM where podman is running in `rootful` mode. So in this case the command is shared between `Docker` and `podman` and is the following:
+```bash
+podman run --rm -it --user $(id -u):$(id -g) --group-add 2020  -p 8888:8888  -v  /PATH/TO/NOTEBOOKS:/workspace  xsuite-test-build   bash -lc 'source /home/xsuiteuser/miniforge3/etc/profile.d/conda.sh && conda activate xsuite && exec jupyter lab --ip=0.0.0.0 --no-browser --notebook-dir=/workspace'
+```
+We run as our own user inside the container and add the container user groud to enable read/write access to the container's file system.
+
+### Windows 
+On Windows, `podman` runs a Linux VM where podman is running in `rootful` mode. So in this case the command is once again shared between `Docker` and `podman` and is the following:
+```bash
+podman run --rm --group-add=$(id -g) -it -p 8888:8888   -v /PATH/TO/NOTEBOOKS:/workspace  xsuite-test-build   bash -lc 'source /home/xsuiteuser/miniforge3/etc/profile.d/conda.sh && conda activate xsuite && exec jupyter lab --ip=0.0.0.0 --no-browser --notebook-dir=/workspace'
+```
+
+## Build (local)
+Use the `podman build` command to build locally for your machine:
+```bash
+podman build --arch $(uname -m) -t xsuite-test-build .
+```
+On Windows systems or if you want to build for a specific architecture you can set the `--arch` flag to `arm64` or `amd64` manually.
