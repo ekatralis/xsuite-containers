@@ -9,9 +9,9 @@ This repository provides Docker/Podman container definitions to create consisten
 - For multi-arch builds, enable QEMU / buildx (see examples below).
 
 ## Run Jupyter Notebooks inside container
-Pull the container from ghcr
+Pull the container from the GitHub Container Repository (GHCR) using:
 ```bash
-command-to-be-added
+podman pull ghcr.io/ekatralis/xsuite-containers:latest
 ```
 ### Linux 
 When running `podman` on Linux, we must first determine whether we are running in rootless mode
@@ -22,24 +22,24 @@ If this command returns `true` then we podman is running in `rootless` mode. If 
 
 For `rootless` run the container using:
 ```bash
-podman run --rm -it --userns=keep-id  -v /PATH/TO/NOTEBOOKS:/workspace -p 8888:8888   -v /PATH/TO/NOTEBOOKS:/workspace  xsuite-test-build   bash -lc 'source /home/xsuiteuser/miniforge3/etc/profile.d/conda.sh && conda activate xsuite && exec jupyter lab --ip=0.0.0.0 --no-browser --notebook-dir=/workspace'
+podman run --rm -it --userns=keep-id -p 8888:8888   -v /PATH/TO/NOTEBOOKS:/workspace  ghcr.io/ekatralis/xsuite-containers:latest   bash -lc 'source /home/xsuiteuser/miniforge3/etc/profile.d/conda.sh && conda activate xsuite && exec jupyter lab --ip=0.0.0.0 --no-browser --notebook-dir=/workspace'
 ```
 For `rootful` mode, run the container using
 ```bash
-podman run --rm --group-add=$(id -g) -it -p 8888:8888   -v /PATH/TO/NOTEBOOKS:/workspace  xsuite-test-build   bash -lc 'source /home/xsuiteuser/miniforge3/etc/profile.d/conda.sh && conda activate xsuite && exec jupyter lab --ip=0.0.0.0 --no-browser --notebook-dir=/workspace'
+podman run --rm --group-add=$(id -g) -it -p 8888:8888   -v /PATH/TO/NOTEBOOKS:/workspace  ghcr.io/ekatralis/xsuite-containers:latest   bash -lc 'source /home/xsuiteuser/miniforge3/etc/profile.d/conda.sh && conda activate xsuite && exec jupyter lab --ip=0.0.0.0 --no-browser --notebook-dir=/workspace'
 ```
 For `Docker` the command is the same as `podman` in `rootful` mode.
 ### macOS
 On macOS, `podman` runs a Linux VM where podman is running in `rootful` mode. So in this case the command is shared between `Docker` and `podman` and is the following:
 ```bash
-podman run --rm -it --user $(id -u):$(id -g) --group-add 2020  -p 8888:8888  -v  /PATH/TO/NOTEBOOKS:/workspace  xsuite-test-build   bash -lc 'source /home/xsuiteuser/miniforge3/etc/profile.d/conda.sh && conda activate xsuite && exec jupyter lab --ip=0.0.0.0 --no-browser --notebook-dir=/workspace'
+podman run --rm -it --user $(id -u):$(id -g) --group-add 2020  -p 8888:8888  -v  /PATH/TO/NOTEBOOKS:/workspace  ghcr.io/ekatralis/xsuite-containers:latest   bash -lc 'source /home/xsuiteuser/miniforge3/etc/profile.d/conda.sh && conda activate xsuite && exec jupyter lab --ip=0.0.0.0 --no-browser --notebook-dir=/workspace'
 ```
 We run as our own user inside the container and add the container user groud to enable read/write access to the container's file system.
 
 ### Windows 
 On Windows, `podman` runs a Linux VM where podman is running in `rootful` mode. So in this case the command is once again shared between `Docker` and `podman` and is the following:
 ```bash
-podman run --rm --group-add=$(id -g) -it -p 8888:8888   -v /PATH/TO/NOTEBOOKS:/workspace  xsuite-test-build   bash -lc 'source /home/xsuiteuser/miniforge3/etc/profile.d/conda.sh && conda activate xsuite && exec jupyter lab --ip=0.0.0.0 --no-browser --notebook-dir=/workspace'
+podman run --rm --group-add=$(id -g) -it -p 8888:8888   -v /PATH/TO/NOTEBOOKS:/workspace  ghcr.io/ekatralis/xsuite-containers:latest   bash -lc 'source /home/xsuiteuser/miniforge3/etc/profile.d/conda.sh && conda activate xsuite && exec jupyter lab --ip=0.0.0.0 --no-browser --notebook-dir=/workspace'
 ```
 
 ## Build (local)
