@@ -21,6 +21,9 @@ if [[ ! -d "${NOTEBOOKS_DIR}" ]]; then
   exit 1
 fi
 
+# Promote to absolute path for best compatibility
+NOTEBOOKS_DIR="$(cd "${NOTEBOOKS_DIR}" && pwd -P)"
+
 if [[ -z "${ENGINE}" ]]; then
     echo "Automatically selecting container engine..."
     # Prefer podman if present, otherwise docker
@@ -49,7 +52,7 @@ VOLUME_ARG=( -v "${NOTEBOOKS_DIR}:/workspace" )
 PORT_ARG=( -p "${PORT}:8888" )
 
 if [[ "${ENGINE}" == "docker" ]]; then
-  # Docker is the same as podman rootful mode
+  # Docker is the same as podman rootful mode but requires specifying the home directory
   ENGINE_ARGS+=(  "--user" "$(id -u):$(id -g)" "--group-add" "2020" "-e" "HOME=/home/xsuiteuser/" )
 elif [[ "${OS}" == "Darwin" ]]; then
   # macOS podman runs in a VM (rootful), use macOS-specific user/group setup
