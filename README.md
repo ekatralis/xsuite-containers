@@ -41,11 +41,11 @@ podman run --rm -it --user $(id -u):$(id -g) --group-add 2020  -p 8888:8888  -v 
 We run as our own user inside the container and add the container user groud to enable read/write access to the container's file system.
 
 ### Windows 
-On Windows, `podman` runs a Linux VM where podman is running in `rootful` mode. So in this case the command is once again shared between `Docker` and `podman` and is the following:
+On Windows, `podman` runs a Linux VM where podman is running in `rootful` mode. So in this case the command is shared between `Docker` and `podman` and is the following:
 ```bash
-podman run --rm --group-add=$(id -g) -it -p 8888:8888   -v /PATH/TO/NOTEBOOKS:/workspace  ghcr.io/ekatralis/xsuite-containers:latest   bash -lc 'source /home/xsuiteuser/miniforge3/etc/profile.d/conda.sh && conda activate xsuite && exec jupyter lab --ip=0.0.0.0 --no-browser --notebook-dir=/workspace'
+podman run --rm -it -p 8888:8888   -v /PATH/TO/NOTEBOOKS:/workspace  ghcr.io/ekatralis/xsuite-containers:latest   bash -lc 'source /home/xsuiteuser/miniforge3/etc/profile.d/conda.sh && conda activate xsuite && exec jupyter lab --ip=0.0.0.0 --no-browser --notebook-dir=/workspace'
 ```
-
+Windows files are mounted with more relaxed permissions, so we can run as `xsuiteuser` inside the container.
 ## Build (local)
 Use the `podman build` command to build locally for your machine:
 ```bash
