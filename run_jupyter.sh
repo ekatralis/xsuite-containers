@@ -58,7 +58,7 @@ else
   # Linux + podman: choose rootless vs rootful
   ROOTLESS="$("${ENGINE}" info --format '{{.Host.Security.Rootless}}' 2>/dev/null || echo "false")"
   if [[ "${ROOTLESS}" == "true" ]]; then
-    ENGINE_ARGS+=( "--userns=keep-id" )
+    ENGINE_ARGS+=( "--userns=keep-id" "--user" "$(id -u):$(id -g)" "--group-add" "2020" )
   else
     ENGINE_ARGS+=( "--group-add=$(id -g)" )
   fi
