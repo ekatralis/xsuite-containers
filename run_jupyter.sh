@@ -50,7 +50,7 @@ PORT_ARG=( -p "${PORT}:8888" )
 
 if [[ "${ENGINE}" == "docker" ]]; then
   # Docker is the same as podman rootful mode
-  ENGINE_ARGS+=( "--group-add=$(id -g)" )
+  ENGINE_ARGS+=(  "--user" "$(id -u):$(id -g)" "--group-add" "2020" "-e" "HOME=/home/xsuiteuser/" )
 elif [[ "${OS}" == "Darwin" ]]; then
   # macOS podman runs in a VM (rootful), use macOS-specific user/group setup
   ENGINE_ARGS+=( "--user" "$(id -u):$(id -g)" "--group-add" "2020" )
@@ -60,7 +60,7 @@ else
   if [[ "${ROOTLESS}" == "true" ]]; then
     ENGINE_ARGS+=( "--userns=keep-id" "--user" "$(id -u):$(id -g)" "--group-add" "2020" )
   else
-    ENGINE_ARGS+=( "--group-add=$(id -g)" )
+    ENGINE_ARGS+=( "--user" "$(id -u):$(id -g)" "--group-add" "2020")
   fi
 fi
 
