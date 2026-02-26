@@ -48,15 +48,16 @@ SHELL ["conda", "run", "-n", "xsuite", "/bin/bash", "-c"]
 # Install pip packages (example)
 RUN conda run -n xsuite pip install xsuite["full_env"]==0.45.5
 RUN conda run -n xsuite pip install xwakes['tests'] h5py mpi4py
-RUN mkdir -p /home/xsuiteuser/.packages && \
-    cd /home/xsuiteuser/.packages && \
-    git clone https://github.com/xsuite/xobjects && \
-    git clone https://github.com/xsuite/xdeps && \
-    git clone https://github.com/xsuite/xpart && \
-    git clone https://github.com/xsuite/xtrack && \
-    git clone https://github.com/xsuite/xfields && \
-    git clone https://github.com/xsuite/xwakes && \
-    git clone https://github.com/xsuite/xcoll
+# Uncomment for development version
+# RUN mkdir -p /home/xsuiteuser/.packages && \
+#     cd /home/xsuiteuser/.packages && \
+#     git clone https://github.com/xsuite/xobjects && \
+#     git clone https://github.com/xsuite/xdeps && \
+#     git clone https://github.com/xsuite/xpart && \
+#     git clone https://github.com/xsuite/xtrack && \
+#     git clone https://github.com/xsuite/xfields && \
+#     git clone https://github.com/xsuite/xwakes && \
+#     git clone https://github.com/xsuite/xcoll
 
 
 RUN conda init bash
