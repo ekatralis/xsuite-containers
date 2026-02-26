@@ -4,10 +4,11 @@ set -euo pipefail
 IMAGE="ghcr.io/ekatralis/xsuite-containers:latest"
 PORT="${PORT:-8888}"
 ENGINE="${ENGINE:-}"
+JUPYTER_TOKEN="${JUPYTER_TOKEN:-"xsuite"}"
 
 usage() {
   echo "Usage: $0 /PATH/TO/NOTEBOOKS"
-  echo "Env: PORT=8888 (optional), ENGINE=docker|podman (optional, auto-detected)"
+  echo "Env: PORT=8888 (optional), ENGINE=docker|podman (optional, auto-detected), JUPYTER_TOKEN=auto|<token> (optional, default 'xsuite')"
 }
 
 NOTEBOOKS_DIR="${1:-}"
@@ -43,6 +44,13 @@ echo "Pulling image: ${IMAGE}"
 
 JUPYTER_CMD="source /home/xsuiteuser/miniforge3/etc/profile.d/conda.sh && conda activate xsuite && exec jupyter lab --ip=0.0.0.0 --no-browser --notebook-dir=/workspace"
 
+if [[ "${JUPYTER_TOKEN}" != "auto" ]]; then
+    JUPYTER_CMD+=" --ServerApp.token='${JUPYTER_TOKEN}'"
+    echo "Starting Jupyter Lab on http://localhost:${PORT}/lab?token=${JUPYTER_TOKEN}"
+else
+    echo "Starting Jupyter Lab on http://localhost:${PORT}"
+fi
+
 # Detect OS
 OS="$(uname -s)"
 
@@ -67,7 +75,6 @@ else
   fi
 fi
 
-echo "Starting Jupyter Lab on http://localhost:${PORT}"
 echo "Mounting notebooks: ${NOTEBOOKS_DIR} -> /workspace"
 
 exec "${ENGINE}" run --rm -it \

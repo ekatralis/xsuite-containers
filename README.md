@@ -93,18 +93,9 @@ On macOS and Linux, you can launch the notebook environment using the following 
 ```
 Where `PATH/TO/NOTEBOOKS` is a relative/absolute path to the folder containing all the relevant tutorial notebooks. This directory inside the notebook environment is mounted under `/workspace`.
 
-The script will print in your terminal something along the lines of:
-```text
-    To access the server, open this file in a browser:
-        file:///home/xsuiteuser/.local/share/jupyter/runtime/jpserver-1-open.html
-    Or copy and paste one of these URLs:
-        http://039df4895d17:8888/lab?token={long_string_of_letters_and_numbers}
-        http://127.0.0.1:8888/lab?token={long_string_of_letters_and_numbers}
-```
-You can click the full url (`http://127.0.0.1:8888/lab?token={long_string_of_letters_and_numbers}`) or copy-paste it into your browser and you should be able to access your notebooks without any issues. If you run into any issues you can also visit:
-```text
-http://localhost:8888/lab?token={long_string_of_letters_and_numbers}
-```
+Once the script is running you can access the jupyter lab instance on the address:
+
+http://localhost:8888/lab?token=xsuite
 
 If you run into permission issues, you might need to make the script executable by running:
 ```bash
@@ -115,7 +106,8 @@ Then retry the previous command.
 **Advanced options:**
 The script automatically selects the optimal parameteres for running the notebook environment. However, you can set the following environment variables while running this script:
 - `ENGINE`: By setting this enviornment variable to `podman` or `docker` you can force the script to use your desired container engine.
-- `PORT`: Forward to a different port than `8888` on localhost
+- `PORT`: Select which port to forward to on localhost. Default is `8888`
+- `JUPYTER_TOKEN`: The token for the jupyter server. By default it is `xsuite`, you can set a custom value or set to `auto` to let the jupyter server randomly generate one.
 
 #### Windows
 
@@ -125,23 +117,19 @@ On Windows, use **PowerShell** (*not Command Prompt*) and run:
 ```
 Where `C:\PATH\TO\NOTEBOOKS` is an absolute path to the folder containing all the relevant tutorial notebooks. You can obtain that path by opening the folder containing the notebooks on File Explorer, clicking on the navigation bar and copying the directory. This directory inside the notebook environment is mounted under `/workspace`. It is possible that you will be asked whether you trust this script and you want it to run, select yes in all such prompts.
 
-The script will print in your terminal something along the lines of:
-```text
-    To access the server, open this file in a browser:
-        file:///home/xsuiteuser/.local/share/jupyter/runtime/jpserver-1-open.html
-    Or copy and paste one of these URLs:
-        http://039df4895d17:8888/lab?token={long_string_of_letters_and_numbers}
-        http://127.0.0.1:8888/lab?token={long_string_of_letters_and_numbers}
-```
-You can click the full url (`http://127.0.0.1:8888/lab?token={long_string_of_letters_and_numbers}`) or copy-paste it into your browser and you should be able to access your notebooks without any issues. If you run into any issues you can also visit:
-```text
-http://localhost:8888/lab?token={long_string_of_letters_and_numbers}
-```
+Once the script is running you can access the jupyter lab instance on the address:
+
+http://localhost:8888/lab?token=xsuite
 
 If PowerShell blocks the script with an "execution policy" error, run this instead to bypass for this run:
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\run_jupyter.ps1 -NotebooksDir 'C:\path\to\your\notebooks'
 ```
+**Advanced options:**
+The script automatically selects the optimal parameteres for running the notebook environment. However, you can set the following variables while running this script:
+- `Engine`: By setting this enviornment variable to `podman` or `docker` you can force the script to use your desired container engine.
+- `Port`: Select which port to forward to on localhost. Default is `8888`
+- `JUPYTER_TOKEN`: The token for the jupyter server. By default it is `xsuite`, you can set a custom value or set to `auto` to let the jupyter server randomly generate one.
 
 ## Cleanup (Post-Tutorial and Optional)
 
