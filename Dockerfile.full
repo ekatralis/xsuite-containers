@@ -1,5 +1,4 @@
-# ---------- builder ----------
-FROM ubuntu:24.04 AS builder
+FROM ubuntu:24.04
 
 ARG UID=2020
 ARG GID=2020
@@ -15,64 +14,52 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 RUN chown -R xsuiteuser:xsuiteuser /home/xsuiteuser && \
     chmod 2775 /home/xsuiteuser && \
     umask 002 && \
-    mkdir -p /home/xsuiteuser/.cache
+    mkdir -p /home/xsuiteuser/.cache && \
+    mkdir -p /home/xsuiteuser/.local/bin
 
 USER xsuiteuser
 WORKDIR /home/xsuiteuser
 
-ENV CONDA_DIR=/home/xsuiteuser/miniforge3
 ENV ENV_PREFIX=/home/xsuiteuser/xsuite-env
-ENV PATH=$CONDA_DIR/bin:$PATH \
-    PIP_NO_CACHE_DIR=1 \
-    PIP_DISABLE_PIP_VERSION_CHECK=1
+# micromamba needs a “root prefix” for caches / pkgs (can be small, but must exist)
+ENV MAMBA_ROOT_PREFIX=/home/xsuiteuser/.micromamba
 
+# put the env first on PATH (ensure that we can run commands directly inside env)
+ENV PATH=$ENV_PREFIX/bin:/home/xsuiteuser/.local/bin:$PATH \
+    PIP_NO_CACHE_DIR=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1 \
+    # Ensure default shell is bash and that we are always inside the micromamba environment
+    SHELL=/bin/bash \
+    BASH_ENV=/home/xsuiteuser/.bash_env_mamba
+
+# install micromamba (arch-aware) + create required dirs
 RUN set -eux; \
-    ARCH=$(uname -m); \
+    umask 002; \
+    ARCH="$(uname -m)"; \
     case "$ARCH" in \
-        x86_64|amd64)  MF_ARCH="x86_64" ;; \
-        aarch64|arm64) MF_ARCH="aarch64" ;; \
+        x86_64|amd64)  MM_ARCH="64" ;; \
+        aarch64|arm64) MM_ARCH="aarch64" ;; \
         *) echo "Unsupported arch: $ARCH"; exit 1 ;; \
     esac; \
-    wget -q https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-Linux-${MF_ARCH}.sh -O /tmp/miniforge.sh; \
-    bash /tmp/miniforge.sh -b -p $CONDA_DIR; \
-    rm /tmp/miniforge.sh
+    mkdir -p "$MAMBA_ROOT_PREFIX" "$(dirname "$ENV_PREFIX")"; \
+    wget -qO- "https://micro.mamba.pm/api/micromamba/linux-${MM_ARCH}/latest" \
+      | tar -xj -C /home/xsuiteuser/.local/bin --strip-components=1 bin/micromamba; \
+    /home/xsuiteuser/.local/bin/micromamba --version 
 
-# Create env directly at prefix (no named env, no conda init)
-RUN mamba create -y -p "$ENV_PREFIX" python=3.11 && \
-    mamba install -y -p "$ENV_PREFIX" -c conda-forge mpi4py h5py pytest pytest-mock && \
-    mamba run -p "$ENV_PREFIX" pip install -v 'xsuite[full_env]==0.45.5' && \
-    mamba run -p "$ENV_PREFIX" pip install -v "xwakes[tests]" && \
-    mamba clean -a -f -y && \
+# Create env directly at prefix
+RUN set -eux; \
+    umask 002; \
+    micromamba create -y -p "$ENV_PREFIX" python=3.11 && \
+    micromamba install -y -p "$ENV_PREFIX" -c conda-forge mpi4py h5py pytest pytest-mock && \
+    micromamba run -p "$ENV_PREFIX" pip install -v 'xsuite[full_env]==0.45.5' && \
+    micromamba run -p "$ENV_PREFIX" pip install -v "xwakes[tests]" && \
+    micromamba clean -a -f -y && \
     # extra trimming
     find "$ENV_PREFIX" -type f -name '*.a' -delete && \
     find "$ENV_PREFIX" -type f -name '*.pyc' -delete && \
-    find "$ENV_PREFIX" -type d -name '__pycache__' -prune -exec rm -rf {} +
-
-# ---------- runtime ----------
-FROM ubuntu:24.04 AS runtime
-
-ARG UID=2020
-ARG GID=2020
-
-RUN groupadd -g ${GID} xsuiteuser \
- && useradd -m -u ${UID} -g ${GID} -s /bin/bash xsuiteuser
-
-# Install only runtime libs you actually need.
-# Often mpi4py needs an MPI runtime (openmpi or mpich). Which one depends on what conda-forge pulled.
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    ca-certificates gcc build-essential \
-    && rm -rf /var/lib/apt/lists/*
-
-RUN chown -R xsuiteuser:xsuiteuser /home/xsuiteuser && \
-    chmod 2775 /home/xsuiteuser && \
-    mkdir -p /home/xsuiteuser/.cache && \
-    chown -R xsuiteuser:xsuiteuser /home/xsuiteuser/.cache && \
-    chmod 2775 /home/xsuiteuser/.cache
-    
-USER xsuiteuser
-WORKDIR /home/xsuiteuser
-
-COPY --from=builder --chown=2020:2020 /home/xsuiteuser/xsuite-env /home/xsuiteuser/xsuite-env
-ENV PATH=/home/xsuiteuser/xsuite-env/bin:$PATH \
-    PIP_NO_CACHE_DIR=1 \
-    PIP_DISABLE_PIP_VERSION_CHECK=1
+    find "$ENV_PREFIX" -type d -name '__pycache__' -prune -exec rm -rf {} + && \
+    printf '%s\n' \
+        'eval "$(micromamba shell hook --shell bash)"' \
+        'micromamba activate /home/xsuiteuser/xsuite-env >/dev/null 2>&1 || true' \
+        > /home/xsuiteuser/.bash_env_mamba \
+    && echo 'source /home/xsuiteuser/.bash_env_mamba' >> /home/xsuiteuser/.bashrc
