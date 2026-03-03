@@ -15,7 +15,9 @@ RUN chown -R xsuiteuser:xsuiteuser /home/xsuiteuser && \
     chmod 2775 /home/xsuiteuser && \
     umask 002 && \
     mkdir -p /home/xsuiteuser/.cache && \
-    mkdir -p /home/xsuiteuser/.local/bin
+    chown -R xsuiteuser:xsuiteuser /home/xsuiteuser/.cache && \
+    mkdir -p /home/xsuiteuser/.local/bin && \
+    chown -R xsuiteuser:xsuiteuser /home/xsuiteuser/.local
 
 USER xsuiteuser
 WORKDIR /home/xsuiteuser
