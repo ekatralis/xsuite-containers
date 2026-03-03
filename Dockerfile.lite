@@ -1,0 +1,79 @@
+# ---------- builder ----------
+FROM ubuntu:24.04 AS builder
+
+ARG UID=2020
+ARG GID=2020
+
+RUN groupadd -g ${GID} xsuiteuser \
+ && useradd -m -u ${UID} -g ${GID} -s /bin/bash xsuiteuser
+
+# Build deps (keep only what you truly need to build wheels / compile)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    wget bzip2 ca-certificates curl git clang \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN chown -R xsuiteuser:xsuiteuser /home/xsuiteuser && \
+    chmod 2775 /home/xsuiteuser && \
+    umask 002 && \
+    mkdir -p /home/xsuiteuser/.cache
+
+USER xsuiteuser
+WORKDIR /home/xsuiteuser
+
+ENV CONDA_DIR=/home/xsuiteuser/miniforge3
+ENV ENV_PREFIX=/home/xsuiteuser/xsuite-env
+ENV CC=clang \
+    PATH=$CONDA_DIR/bin:$PATH \
+    PIP_NO_CACHE_DIR=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1
+
+RUN set -eux; \
+    ARCH=$(uname -m); \
+    case "$ARCH" in \
+        x86_64|amd64)  MF_ARCH="x86_64" ;; \
+        aarch64|arm64) MF_ARCH="aarch64" ;; \
+        *) echo "Unsupported arch: $ARCH"; exit 1 ;; \
+    esac; \
+    wget -q https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-Linux-${MF_ARCH}.sh -O /tmp/miniforge.sh; \
+    bash /tmp/miniforge.sh -b -p $CONDA_DIR; \
+    rm /tmp/miniforge.sh
+
+# Create env directly at prefix (no named env, no conda init)
+RUN mamba create -y -p "$ENV_PREFIX" python=3.11 && \
+    mamba install -y -p "$ENV_PREFIX" -c conda-forge h5py pytest pytest-mock && \
+    mamba run -p "$ENV_PREFIX" pip install -v 'xsuite==0.45.5' && \
+    mamba run -p "$ENV_PREFIX" pip install -v "xwakes" && \
+    mamba clean -a -f -y && \
+    # extra trimming
+    find "$ENV_PREFIX" -type f -name '*.a' -delete && \
+    find "$ENV_PREFIX" -type f -name '*.pyc' -delete && \
+    find "$ENV_PREFIX" -type d -name '__pycache__' -prune -exec rm -rf {} +
+
+# ---------- runtime ----------
+FROM ubuntu:24.04 AS runtime
+
+ARG UID=2020
+ARG GID=2020
+
+RUN groupadd -g ${GID} xsuiteuser \
+ && useradd -m -u ${UID} -g ${GID} -s /bin/bash xsuiteuser
+
+# Install only runtime libs you actually need.
+# Often mpi4py needs an MPI runtime (openmpi or mpich). Which one depends on what conda-forge pulled.
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ca-certificates gcc build-essential \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN chown -R xsuiteuser:xsuiteuser /home/xsuiteuser && \
+    chmod 2775 /home/xsuiteuser && \
+    mkdir -p /home/xsuiteuser/.cache && \
+    chown -R xsuiteuser:xsuiteuser /home/xsuiteuser/.cache && \
+    chmod 2775 /home/xsuiteuser/.cache
+    
+USER xsuiteuser
+WORKDIR /home/xsuiteuser
+
+COPY --from=builder --chown=2020:2020 /home/xsuiteuser/xsuite-env /home/xsuiteuser/xsuite-env
+ENV PATH=/home/xsuiteuser/xsuite-env/bin:$PATH \
+    PIP_NO_CACHE_DIR=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1
