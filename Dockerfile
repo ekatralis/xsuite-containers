@@ -1,32 +1,31 @@
-FROM ubuntu:24.04
-# Could try debian:bookworm-slim
+# ---------- builder ----------
+FROM ubuntu:24.04 AS builder
 
-# Non-root user for safety UID and GID outside of typical range to avoid conflicts with host users
-# Supposed to use --user when running container to map to host user
 ARG UID=2020
 ARG GID=2020
 
 RUN groupadd -g ${GID} xsuiteuser \
  && useradd -m -u ${UID} -g ${GID} -s /bin/bash xsuiteuser
 
-WORKDIR /home/xsuiteuser
-
-# Install system dependencies while still in root 
-RUN apt-get update && \
-    apt-get install -y wget bzip2 ca-certificates curl git gcc && \ 
-    rm -rf /var/lib/apt/lists/*
+# Build deps (keep only what you truly need to build wheels / compile)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    wget bzip2 ca-certificates curl git gcc g++ build-essential \
+    && rm -rf /var/lib/apt/lists/*
 
 RUN chown -R xsuiteuser:xsuiteuser /home/xsuiteuser && \
     chmod 2775 /home/xsuiteuser && \
     umask 002 && \
     mkdir -p /home/xsuiteuser/.cache
 
-# Switch to user for Miniforge setup and subsequent steps
 USER xsuiteuser
+WORKDIR /home/xsuiteuser
 
-# Install Miniforge (x86_64)
-ENV MINIFORGE_VERSION=latest
 ENV CONDA_DIR=/home/xsuiteuser/miniforge3
+ENV ENV_PREFIX=/home/xsuiteuser/xsuite-env
+ENV PATH=$CONDA_DIR/bin:$PATH \
+    PIP_NO_CACHE_DIR=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1
+
 RUN set -eux; \
     ARCH=$(uname -m); \
     case "$ARCH" in \
@@ -34,40 +33,46 @@ RUN set -eux; \
         aarch64|arm64) MF_ARCH="aarch64" ;; \
         *) echo "Unsupported arch: $ARCH"; exit 1 ;; \
     esac; \
-    wget https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-Linux-${MF_ARCH}.sh -O /tmp/miniforge.sh; \
+    wget -q https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-Linux-${MF_ARCH}.sh -O /tmp/miniforge.sh; \
     bash /tmp/miniforge.sh -b -p $CONDA_DIR; \
-    rm /tmp/miniforge.sh 
+    rm /tmp/miniforge.sh
 
-# Activate environment by default
-SHELL ["conda", "run", "-n", "xsuite", "/bin/bash", "-c"]
+# Create env directly at prefix (no named env, no conda init)
+RUN mamba create -y -p "$ENV_PREFIX" python=3.11 && \
+    mamba install -y -p "$ENV_PREFIX" -c conda-forge mpi4py h5py pytest pytest-mock && \
+    mamba run -p "$ENV_PREFIX" pip install -v 'xsuite[full_env]==0.45.5' && \
+    mamba run -p "$ENV_PREFIX" pip install -v "xwakes[tests]" && \
+    mamba clean -a -f -y && \
+    # extra trimming
+    find "$ENV_PREFIX" -type f -name '*.a' -delete && \
+    find "$ENV_PREFIX" -type f -name '*.pyc' -delete && \
+    find "$ENV_PREFIX" -type d -name '__pycache__' -prune -exec rm -rf {} +
 
-# Install pip packages (example)
-ENV PATH=$CONDA_DIR/bin:$PATH \
+# ---------- runtime ----------
+FROM ubuntu:24.04 AS runtime
+
+ARG UID=2020
+ARG GID=2020
+
+RUN groupadd -g ${GID} xsuiteuser \
+ && useradd -m -u ${UID} -g ${GID} -s /bin/bash xsuiteuser
+
+# Install only runtime libs you actually need.
+# Often mpi4py needs an MPI runtime (openmpi or mpich). Which one depends on what conda-forge pulled.
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ca-certificates gcc build-essential \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN chown -R xsuiteuser:xsuiteuser /home/xsuiteuser && \
+    chmod 2775 /home/xsuiteuser && \
+    mkdir -p /home/xsuiteuser/.cache && \
+    chown -R xsuiteuser:xsuiteuser /home/xsuiteuser/.cache && \
+    chmod 2775 /home/xsuiteuser/.cache
+    
+USER xsuiteuser
+WORKDIR /home/xsuiteuser
+
+COPY --from=builder --chown=2020:2020 /home/xsuiteuser/xsuite-env /home/xsuiteuser/xsuite-env
+ENV PATH=/home/xsuiteuser/xsuite-env/bin:$PATH \
     PIP_NO_CACHE_DIR=1 \
     PIP_DISABLE_PIP_VERSION_CHECK=1
-
-RUN conda create -y -n xsuite python=3.11 && \
-    conda install -c conda-forge -y -n xsuite mpi4py h5py && \
-    conda run -n xsuite pip install xsuite["full_env"]==0.45.5 && \
-    conda run -n xsuite pip install xwakes['tests'] && \
-    conda clean -afy
-# Uncomment for development version
-# RUN mkdir -p /home/xsuiteuser/.packages && \
-#     cd /home/xsuiteuser/.packages && \
-#     git clone https://github.com/xsuite/xobjects && \
-#     git clone https://github.com/xsuite/xdeps && \
-#     git clone https://github.com/xsuite/xpart && \
-#     git clone https://github.com/xsuite/xtrack && \
-#     git clone https://github.com/xsuite/xfields && \
-#     git clone https://github.com/xsuite/xwakes && \
-#     git clone https://github.com/xsuite/xcoll
-
-
-RUN conda init bash
-RUN echo 'conda activate xsuite' >> /home/xsuiteuser/.bashrc
-# RUN echo 'umask 002' >> /home/xsuiteuser/.bashrc
-
-# Make dirs setgid + group writable
-# RUN find /home/xsuiteuser -type d -exec chmod g+rws {} + && \
-#     # Make everything group readable/writable, but preserve executability
-#     find /home/xsuiteuser -exec chmod g+rwX {} +
