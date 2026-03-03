@@ -42,7 +42,7 @@ echo "Using container engine: ${ENGINE}"
 echo "Pulling image: ${IMAGE}"
 "${ENGINE}" pull "${IMAGE}"
 
-JUPYTER_CMD="source /home/xsuiteuser/miniforge3/etc/profile.d/conda.sh && conda activate xsuite && exec jupyter lab --ip=0.0.0.0 --no-browser --notebook-dir=/workspace"
+JUPYTER_CMD="jupyter lab --ip=0.0.0.0 --no-browser --notebook-dir=/workspace"
 
 if [[ "${JUPYTER_TOKEN}" != "auto" ]]; then
     JUPYTER_CMD+=" --ServerApp.token='${JUPYTER_TOKEN}'"

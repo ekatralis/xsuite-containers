@@ -30,7 +30,7 @@ Write-Host "Using container engine: $Engine"
 Write-Host "Pulling image: $Image"
 & $Engine pull $Image
 
-$JupyterCmd = "source /home/xsuiteuser/miniforge3/etc/profile.d/conda.sh && conda activate xsuite && exec jupyter lab --ip=0.0.0.0 --no-browser --notebook-dir=/workspace"
+$JupyterCmd = "jupyter lab --ip=0.0.0.0 --no-browser --notebook-dir=/workspace"
 
 if ($JUPYTER_TOKEN -ne 'auto') {
   $JupyterCmd += " --ServerApp.token='$JUPYTER_TOKEN'"
