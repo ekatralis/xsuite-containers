@@ -1,0 +1,13 @@
+name: xsuite-env
+channels:
+  - conda-forge
+dependencies:
+  - python=3.11
+  - mpi4py
+  - h5py
+  - pytest
+  - pytest-mock
+  - pip
+  - pip:
+      - xsuite[full_env]==0.45.5
+      - xwakes[tests]

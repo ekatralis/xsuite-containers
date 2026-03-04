@@ -38,11 +38,10 @@ RUN set -eux; \
     bash /tmp/miniforge.sh -b -p $CONDA_DIR; \
     rm /tmp/miniforge.sh
 
+COPY ./envs/lite.yaml /tmp/env.yaml
+
 # Create env directly at prefix (no named env, no conda init)
-RUN mamba create -y -p "$ENV_PREFIX" python=3.11 && \
-    mamba install -y -p "$ENV_PREFIX" -c conda-forge h5py pytest pytest-mock && \
-    mamba run -p "$ENV_PREFIX" pip install -v 'xsuite==0.45.5' && \
-    mamba run -p "$ENV_PREFIX" pip install -v "xwakes" && \
+RUN PIP_VERBOSE=1 mamba create -y -p "$ENV_PREFIX" -f /tmp/env.yaml && \
     mamba clean -a -f -y && \
     # extra trimming
     find "$ENV_PREFIX" -type f -name '*.a' -delete && \
@@ -73,7 +72,8 @@ RUN chown -R xsuiteuser:xsuiteuser /home/xsuiteuser && \
 USER xsuiteuser
 WORKDIR /home/xsuiteuser
 
-COPY --from=builder --chown=2020:2020 /home/xsuiteuser/xsuite-env /home/xsuiteuser/xsuite-env
+COPY --from=builder --chown=xsuiteuser:xsuiteuser /home/xsuiteuser/xsuite-env /home/xsuiteuser/xsuite-env
+
 ENV PATH=/home/xsuiteuser/xsuite-env/bin:/home/xsuiteuser/.local/bin:$PATH \
     PIP_NO_CACHE_DIR=1 \
     PIP_DISABLE_PIP_VERSION_CHECK=1 \

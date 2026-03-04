@@ -48,18 +48,18 @@ RUN set -eux; \
       | tar -xj -C /home/xsuiteuser/.local/bin --strip-components=1 bin/micromamba; \
     /home/xsuiteuser/.local/bin/micromamba --version 
 
+COPY --chown=xsuiteuser:xsuiteuser ./envs/full.yaml /tmp/env.yaml
+
 # Create env directly at prefix
 RUN set -eux; \
     umask 002; \
-    micromamba create -y -p "$ENV_PREFIX" python=3.11 && \
-    micromamba install -y -p "$ENV_PREFIX" -c conda-forge mpi4py h5py pytest pytest-mock && \
-    micromamba run -p "$ENV_PREFIX" pip install -v 'xsuite[full_env]==0.45.5' && \
-    micromamba run -p "$ENV_PREFIX" pip install -v "xwakes[tests]" && \
+    PIP_VERBOSE=1 micromamba create -y -p "$ENV_PREFIX" -f /tmp/env.yaml && \
     micromamba clean -a -f -y && \
     # extra trimming
     find "$ENV_PREFIX" -type f -name '*.a' -delete && \
     find "$ENV_PREFIX" -type f -name '*.pyc' -delete && \
     find "$ENV_PREFIX" -type d -name '__pycache__' -prune -exec rm -rf {} + && \
+    rm -f /tmp/env.yaml && \
     printf '%s\n' \
         'eval "$(micromamba shell hook --shell bash)"' \
         'micromamba activate /home/xsuiteuser/xsuite-env >/dev/null 2>&1 || true' \
