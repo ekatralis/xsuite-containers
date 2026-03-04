@@ -159,7 +159,7 @@ To inspect the images that you have downloaded locally, which should show an out
 ```text
 $ podman image ls
 REPOSITORY                           TAG         IMAGE ID      CREATED       SIZE
-ghcr.io/ekatralis/xsuite-containers  latest      {hash}        x hours ago   6.8 GB
+ghcr.io/ekatralis/xsuite-containers  latest      {hash}        x hours ago   1.62 GB
 ```
 You can then manually remove the images to free disk space using:
 ```bash
@@ -167,4 +167,4 @@ podman rmi hash-of-image-you-want-to-remove
 ```
 
 ## Details for Developers/Notebook Creators
-If you want more details on how to run the containers on different systems, consult the `DEV.md` file in this repository.
+If you want more details on how to run the containers on different systems or about the container building process, consult the `DEV.md` file in this repository.
