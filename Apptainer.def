@@ -1,0 +1,5 @@
+Bootstrap: docker
+From: ghcr.io/ekatralis/xsuite-containers:latest
+
+%environment
+    unset BASH_ENV
