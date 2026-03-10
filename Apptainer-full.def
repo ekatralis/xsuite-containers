@@ -2,5 +2,7 @@ Bootstrap: docker
 From: ghcr.io/ekatralis/xsuite-containers:latest
 
 %environment
+    # Unset BASH_ENV for Apptainer, as micromamba is read-only and cannot write to it. 
+    # This is not needed for the slim image, which does not use micromamba.
     unset BASH_ENV
     export PYTHONNOUSERSITE=1

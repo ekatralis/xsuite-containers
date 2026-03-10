@@ -1,0 +1,5 @@
+Bootstrap: docker
+From: ghcr.io/ekatralis/xsuite-slim:latest
+
+%environment
+    export PYTHONNOUSERSITE=1
