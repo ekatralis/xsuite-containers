@@ -3,3 +3,4 @@ From: ghcr.io/ekatralis/xsuite-containers:latest
 
 %environment
     unset BASH_ENV
+    export PYTHONNOUSERSITE=1
