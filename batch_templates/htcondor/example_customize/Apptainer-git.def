@@ -1,0 +1,14 @@
+Bootstrap: docker
+From: ghcr.io/ekatralis/xsuite-slim:latest
+
+%post
+    apt-get update
+    apt-get install -y git-all
+    apt-get clean
+    rm -rf /var/lib/apt/lists/*
+
+
+%environment
+    export PYTHONNOUSERSITE=1
+
+#eval "$(micromamba shell hook --shell bash)"
