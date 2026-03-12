@@ -35,3 +35,100 @@ When running the container locally via podman/docker, packages can be installed 
 
 The main shortcoming of this approach is that there is no way to download the container locally and transfer it once for all jobs, this means that every job will re-download the container. This is fine for a small amount of jobs, however for jobs in the hundreds/thousands, it can easily result in rate-limiting from the container repository.
 
+```
+ll /afs/cern.ch/user/e/ekatrali/.local/lib/python3.11/site-packages
+```
+
+## Using Apptainer on HTCondor
+
+This brings us to the best/most HPC native container flavor. Apptainer (fork of Singularity maintained by the Linux Foundation) is an HPC native way of running containers on HPC systems. It doesn't have the same layer structure as docker containers and as such the resulting containers are usually much smaller in size. A key difference when running Apptainer containers is that by default, they don't provide a writeable overlay and as such they are read-only. In addition, by default the home directory is mounted and the `PATH` variable inside the container is appended to include the user's home directory for local installs. 
+
+### A bit of background
+To run jobs inside Apptainer containers, the current [documentation](https://batchdocs.web.cern.ch/containers/singularity.html) suggests the following submission file:
+```text
+executable              = runme.sh
+log                     = singularity.$(ClusterId).log
+error                   = singularity.$(ClusterId).$(ProcId).err
+output                  = singularity.$(ClusterId).$(ProcId).out
+should_transfer_files   = YES
+MY.JobFlavour           = "longlunch"
+transfer_input_files    = root://eosuser.cern.ch//eos/user/b/bejones/scripts/payload.py, root://eosuser.cern.ch//eos/user/b/bejones/data/input.txt
+output_destination      = root://eosuser.cern.ch//eos/user/b/bejones/results/$(ClusterId)/
+transfer_output_files   = output.txt
+MY.XRDCP_CREATE_DIR     = True
+MY.SingularityImage     = "/cvmfs/unpacked.cern.ch/gitlab-registry.cern.ch/batch-team/containers/plusbatch/cs8-full:latest"
+queue
+```
+However, as you may have guessed from the previous comments, this has one very big flaw: It mounts your AFS home as the container `$HOME` by default, which can create several issues if your scripts happen to use the home directory for caching (for example).
+
+### How to actually use Apptainer on HTCondor
+The following documentation describes how to use the containers defined in this repository. If you have created your own custom definitions, the process should be very similar, however you may need to slightly adapt the commands to your use case.
+
+To build the container, you can use your desired definition. From inside the main folder of this repository run:
+```bash
+apptainer build xsuitecontainer.sif Apptainer-{full,slim}.sif
+```
+The above command will generate a `.sif` container in your local repository. If you want to inspect the container by running a shell inside it you can run:
+```bash
+apptainer exec xsuitecontainer.sif bash
+```
+Now that we have created a local container image, we can define our executable, which we can unimaginatively name `executable.sh`:
+```bash
+#!/usr/bin/env bash
+
+containerrun() {
+  apptainer exec \
+    --env PYTHONNOUSERSITE=1 \
+    --home "$_CONDOR_SCRATCH_DIR" \
+    --writable-tmpfs \
+    --cleanenv \
+    xsuitecontainer.sif \
+    "$@"
+}
+
+containerrun python script.py
+```
+> [!IMPORTANT]
+> Containers are *isolated environments* and sessions are ephemeral. Any environment variables you set in this script *will not* be transferred to the script. 
+> Commands run under previous `containerrun` commands *do not* carry over to other runs.
+
+The `containerrun` function simply runs the `apptainer exec` with some default options which are best-suited for usage on HTCondor:
+- `--env PYTHONNOUSERSITE=1`: This ensures that no packages are being shadowed by packages installed locally on AFS. (Note: There should be no leakage from AFS given that we subsequently mount the condor scratch directory as the home for the container, but it is a good practice)
+- `--home "$_CONDOR_SCRATCH_DIR"`: Mounts the local condor scratch directory as `HOME` inside the container. This directory is emptied after a job has finished. This ensures that no files are accidentally spilling over from the container to AFS.
+- `--writable-tmpfs`: This introduces a small 64MB temporary writeable layer over the container filesystem. It ensures that jobs cannot crash if a package tries to create a small file inside the container. This is not intended to be used to perform temporary modifications to the container (such as install additional packages to the container. For that see below).
+- `--cleanenv`: Ensures that environment variables from the main environment (or `.bashrc`) are not accidentally being transfered inside the container
+- `xsuitecontainer.sif`: The container name. If you are using a different container replace it with the desired container.
+
+If you already have a job script that you want to use, you can simply wrap that script like so:
+```bash
+#!/usr/bin/env bash
+
+containerrun() {
+  apptainer exec \
+    --env PYTHONNOUSERSITE=1 \
+    --home "$_CONDOR_SCRATCH_DIR" \
+    --writable-tmpfs \
+    --cleanenv \
+    xsuitecontainer.sif \
+    "$@"
+}
+
+containerrun yourscript.sh
+```
+In this case you have to ensure that your script is already executable (`chmod +x yourscript.sh`). 
+
+For the setup described above our sample submission script becomes:
+```text
+executable              = executable.sh
+arguments               = ""
+transfer_input_files	= xsuitecontainer.sif, yourscript.sh
+should_transfer_files   = YES
+when_to_transfer_output = ON_EXIT
+output                  = out.$(ClusterId).$(ProcId)
+error                   = err.$(ClusterId).$(ProcId)
+log                     = log.$(ClusterId)
+queue 1
+```
+We have to ensure that we use the `transfer_input_files` argument to transfer both our container and our executable script when submitting the job.
+
+
