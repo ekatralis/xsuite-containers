@@ -33,6 +33,13 @@ For `Docker` the command is:
 ```bash
 podman run --rm --user $(id -u):$(id -g) --group-add 2020 -e HOME=/home/xsuiteuser/ -it -p 8888:8888   -v /PATH/TO/NOTEBOOKS:/workspace  ghcr.io/ekatralis/xsuite-containers:latest   bash -lc 'jupyter lab --ip=0.0.0.0 --no-browser --notebook-dir=/workspace'
 ```
+
+In SELinux environments, you can run into permission issues even if users and groups are correctly configured, in this case, you must append a `:z` or a `:Z` to the workspace mount:
+```bash
+-v ./Documents/0000/:/workspace:Z 
+```
+The lowercase `z` means that the mount is shared between multiple containers, `Z` is a private label for only one container.
+
 ### macOS
 On macOS, `podman` runs a Linux VM where podman is running in `rootful` mode. So in this case the command is shared between `Docker` and `podman` and is the following:
 ```bash
@@ -49,19 +56,18 @@ Windows files are mounted with more relaxed permissions, so we can run as `xsuit
 ## Build (local)
 Use the `podman build` command to build locally for your machine:
 ```bash
-podman build --arch $(uname -m) -t xsuite-test-build Dockerfile.{full,lite} #Select which version to build
+podman build --build-arg FLAVOR={full,lite} --arch $(uname -m) -t xsuite-test-build -f Dockerfile.cpu #Select which version to build
 ```
 On Windows systems or if you want to build for a specific architecture you can set the `--arch` flag to `arm64` or `amd64` manually.
-
-## Considerations
-When building containers there is a clear tradeoff between image size and included packages/dependencies. As such, the correct way forward is to split the containers into two versions:
-- A full version (`Dockerfile.full`) which is intended for running notebooks/simulations locally and includes a full jupyter environment as well as added packages for data analysis etc. This image is currently 1.62GB uncompressed.
-    - This package is currently built with the intention to be (somewhat) expandable, as such it includes a `micromamba` installation and environment for installing packages from both python and conda-forge. The `micromamba` installation is minimal and doesn't add much weight to the final image.
-- A lite version (`Dockerfile.lite`) which is intended for running simulations in batch systems, such as HTCondor. This version includes the bare minimum packages for running xsuite simulations and is much smaller. Current size is 901MB uncompressed.
-    - This version implements a multi-stage build using `miniforge3` and then extracting a single environment in the final build. The final image doesn't bundle conda so only python packages can be installed.
-
-> **_NOTE:_**  The multi-stage build is not strictly required if we switch that image to `micromamba` as well. Using the full `micromamba` toolkit only really adds ~15MB to the container. My current idea is to intentionally keep it this way, as the lite image is generally intended to be used as-is for simply running simulations. Also avoids having to add the auto-activation of the micromamba environment in bash which should make it marginally more lightweight.
-
+### Build with custom environments
+If you want to build a container with your own custom conda/mamba environment, you add your environment definition in the `envs` folder under any name you want and then build by setting the `FLAVOR` build argument to the same name as the `.yaml` file containing all the environment information. For example, if your environment definition is named `myenv.yaml`, you can run:
+```bash
+podman build --build-arg FLAVOR=myenv --arch $(uname -m) -t xsuite-custom-build -f Dockerfile.cpu #Select which version to build
+```
+If you want to export your current active environment you can run:
+```bash
+conda/micromamba env export --no-builds > myenv.yaml
+```
 
 ## Run on LxPlus
 In order for the containers to function correctly in rootless podman in LxPlus, you must first run the following command:

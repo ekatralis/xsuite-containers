@@ -2,8 +2,9 @@ name: xsuite-env
 channels:
   - conda-forge
 dependencies:
-  - python=3.11
+  - python=3.12
   - mpi4py
+  - mpmath
   - h5py
   - pytest
   - pytest-mock
