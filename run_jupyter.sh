@@ -55,8 +55,9 @@ fi
 OS="$(uname -s)"
 
 # Build engine args depending on OS + podman mode rules
+[[ -e /sys/fs/selinux/enforce ]] && MOUNT_SUFFIX=":Z" || MOUNT_SUFFIX=""
 ENGINE_ARGS=()
-VOLUME_ARG=( -v "${NOTEBOOKS_DIR}:/workspace" )
+VOLUME_ARG=( -v "${NOTEBOOKS_DIR}:/workspace${MOUNT_SUFFIX}" )
 PORT_ARG=( -p "${PORT}:8888" )
 
 if [[ "${ENGINE}" == "docker" ]]; then
