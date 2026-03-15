@@ -131,4 +131,55 @@ queue 1
 ```
 We have to ensure that we use the `transfer_input_files` argument to transfer both our container and our executable script when submitting the job.
 
+### How to modify container for custom packages
+The goal of this repository is to provide containers which are ready-to-use, as such if you find that an important package is missing, please open and issue to see if it can be included in the next release. However, it is often the case that you need to install your own custom packages, or modified versions of existing packages. In this case, two different approaches can be used.
+
+#### Approach to package management inside the container
+- **Recommended approach**: The container ship with a main `micromamba` environment installed under `/home/xsuiteuser/xsuite-env`. It is recommended to use `micromamba` and `pip` inside that environment to manage packages and dependencies. `micromamba` shares the same interface as `conda`, as you can proceed as you would as if you were inside a `conda` environment
+- The base OS for the container is Ubuntu, so you can technically install packages using `apt-get`. While this way of installing packages is supported when using Apptainer, it is recommended to try the `micromamba` route first.
+
+#### Modify the container definition
+The Apptainer container definitions can be found in the `.def` files in the main directory of this repository. In the following example, we will replace one of the python packages with our own fork to test out changes. This example can also be found under `example_customize` as well.
+```text
+Bootstrap: docker
+From: ghcr.io/ekatralis/xsuite-containers:latest
+
+%post
+    # Set path to environment for convenience
+    ENV_PREFIX="/home/xsuiteuser/xsuite-env"
+
+    # Install any packages inside /home/xsuiteuser
+    mkdir -p /home/xsuiteuser/packages
+    cd /home/xsuiteuser/packages/
+
+    # Clone a custom package that requires compilation + cmake
+    git clone --recursive https://github.com/ekatralis/PyKLU.git
+    cd ./PyKLU
+    # Install cmake from conda-forge
+    micromamba install -y -p "$ENV_PREFIX" -c conda-forge cmake
+    # Install package, ensure that we use micromamba run to stay inside the environment
+    micromamba run -p "$ENV_PREFIX" pip install -e .
+    cd ..
+
+    # Clone our custom package
+    git clone https://github.com/ekatralis/xobjects.git
+    cd ./xobjects
+    git switch AddSparseSolvers # Switch to working branch
+    micromamba run -p "$ENV_PREFIX" pip install -e .[sparse] # include dependencies
+
+%environment
+    # Unset BASH_ENV for Apptainer, as micromamba is read-only and cannot write to it. 
+    unset BASH_ENV
+    export PYTHONNOUSERSITE=1
+```
+Then we can build this container by running:
+```bash
+apptainer build xsuitecontainer.sif Apptainer-custom.sif
+```
+The resulting container can be used exactly as described before.
+#### Use an editable overlay
+
+Apptainer also supports the use of editable overlays on top of the container. Using an editable overlay allows you to interactively edit the container and include your desired packages.
+
+
 

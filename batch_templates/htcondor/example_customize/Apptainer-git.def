@@ -1,14 +1,30 @@
 Bootstrap: docker
-From: ghcr.io/ekatralis/xsuite-slim:latest
+From: ghcr.io/ekatralis/xsuite-containers:latest
 
 %post
-    apt-get update
-    apt-get install -y git-all
-    apt-get clean
-    rm -rf /var/lib/apt/lists/*
+    # Set path to environment for convenience
+    ENV_PREFIX="/home/xsuiteuser/xsuite-env"
 
+    # Install any packages inside /home/xsuiteuser
+    mkdir -p /home/xsuiteuser/packages
+    cd /home/xsuiteuser/packages/
+
+    # Clone a custom package that requires compilation + cmake
+    git clone --recursive https://github.com/ekatralis/PyKLU.git
+    cd ./PyKLU
+    # Install cmake from conda-forge
+    micromamba install -y -p "$ENV_PREFIX" -c conda-forge cmake
+    # Install package, ensure that we use micromamba run to stay inside the environment
+    micromamba run -p "$ENV_PREFIX" pip install -e .
+    cd ..
+    
+    # Clone our custom package
+    git clone https://github.com/ekatralis/xobjects.git
+    cd ./xobjects
+    git switch AddSparseSolvers # Switch to working branch
+    micromamba run -p "$ENV_PREFIX" pip install -e .[sparse] # include dependencies
 
 %environment
+    # Unset BASH_ENV for Apptainer, as micromamba is read-only and cannot write to it. 
+    unset BASH_ENV
     export PYTHONNOUSERSITE=1
-
-#eval "$(micromamba shell hook --shell bash)"
