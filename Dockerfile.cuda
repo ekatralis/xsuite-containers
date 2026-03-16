@@ -75,3 +75,6 @@ RUN set -eux; \
         'micromamba activate /home/xsuiteuser/xsuite-env >/dev/null 2>&1 || true' \
         > /home/xsuiteuser/.bash_env_mamba \
     && echo 'source /home/xsuiteuser/.bash_env_mamba' >> /home/xsuiteuser/.bashrc
+
+ENV CONDA_PREFIX=$ENV_PREFIX \
+    CONDA_DEFAULT_ENV=$ENV_PREFIX \
