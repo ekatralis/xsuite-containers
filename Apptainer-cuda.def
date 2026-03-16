@@ -1,0 +1,11 @@
+Bootstrap: docker
+From: ghcr.io/ekatralis/xsuite-containers:{{ VERSION }}-cuda{{ CUDA }}
+
+%arguments
+    VERSION=latest
+    CUDA=12.8
+
+%environment
+    # Unset BASH_ENV for Apptainer, as micromamba is read-only and cannot write to it. 
+    unset BASH_ENV
+    export PYTHONNOUSERSITE=1

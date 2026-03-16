@@ -31,7 +31,7 @@ podman run --rm --user $(id -u):$(id -g) --group-add 2020 -it -p 8888:8888   -v 
 ```
 For `Docker` the command is:
 ```bash
-podman run --rm --user $(id -u):$(id -g) --group-add 2020 -e HOME=/home/xsuiteuser/ -it -p 8888:8888   -v /PATH/TO/NOTEBOOKS:/workspace  ghcr.io/ekatralis/xsuite-containers:latest   bash -lc 'jupyter lab --ip=0.0.0.0 --no-browser --notebook-dir=/workspace'
+docker run --rm --user $(id -u):$(id -g) --group-add 2020 -e HOME=/home/xsuiteuser/ -it -p 8888:8888   -v /PATH/TO/NOTEBOOKS:/workspace  ghcr.io/ekatralis/xsuite-containers:latest   bash -lc 'jupyter lab --ip=0.0.0.0 --no-browser --notebook-dir=/workspace'
 ```
 
 In SELinux environments, you can run into permission issues even if users and groups are correctly configured, in this case, you must append a `:z` or a `:Z` to the workspace mount:
@@ -53,6 +53,17 @@ On Windows, `podman` runs a Linux VM where podman is running in `rootful` mode. 
 podman run --rm -it -p 8888:8888   -v /PATH/TO/NOTEBOOKS:/workspace  ghcr.io/ekatralis/xsuite-containers:latest   bash -lc 'jupyter lab --ip=0.0.0.0 --no-browser --notebook-dir=/workspace'
 ```
 Windows files are mounted with more relaxed permissions, so we can run as `xsuiteuser` inside the container.
+
+## Running Container with Nvidia GPU access
+When running the CUDA container, you must ensure that the container has access to the GPUs available in your machine. This can be done by appending the following flags to your run command:
+- For Podman:
+    ```text
+    --device nvidia.com/gpu=all
+    ```
+- For Docker:
+    ```text
+    --gpus all --runtime=nvidia
+    ``` 
 ## Build (local)
 Use the `podman build` command to build locally for your machine:
 ```bash
@@ -68,6 +79,8 @@ If you want to export your current active environment you can run:
 ```bash
 conda/micromamba env export --no-builds > myenv.yaml
 ```
+### Build CUDA container
+The CUDA container can be built in the exact same way as described above, but by switching out `Dockerfile.cpu` with `Dockerfile.cuda`.
 
 ## Run on LxPlus
 In order for the containers to function correctly in rootless podman in LxPlus, you must first run the following command:

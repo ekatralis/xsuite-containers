@@ -15,18 +15,35 @@ jobs:
     strategy:
       matrix:
         include:
-          - name: full
+          # CPU images (no suffix)
+          - name: full-cpu
             flavor: full
             image: ghcr.io/ekatralis/xsuite-containers
-          - name: lite
+            dockerfile: Dockerfile.cpu
+            platforms: linux/amd64,linux/arm64
+            tag_suffix: ""
+
+          - name: lite-cpu
             flavor: lite
             image: ghcr.io/ekatralis/xsuite-slim
+            dockerfile: Dockerfile.cpu
+            platforms: linux/amd64,linux/arm64
+            tag_suffix: ""
+
+          # CUDA image
+          - name: cuda
+            flavor: full
+            image: ghcr.io/ekatralis/xsuite-containers
+            dockerfile: Dockerfile.cuda
+            platforms: linux/amd64
+            tag_suffix: "-cuda12.8"
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Set up QEMU (for multi-arch)
+      - name: Set up QEMU
+        if: contains(matrix.platforms, 'arm64')
         uses: docker/setup-qemu-action@v3
 
       - name: Set up Docker Buildx
@@ -45,19 +62,19 @@ jobs:
         with:
           images: ${{ matrix.image }}
           tags: |
-            type=ref,event=tag
-            type=raw,value=latest,enable=${{ startsWith(github.ref, 'refs/tags/v') }}
+            type=raw,value=${{ github.ref_name }}${{ matrix.tag_suffix }}
+            type=raw,value=latest${{ matrix.tag_suffix }}
 
       - name: Build and push
         uses: docker/build-push-action@v6
         with:
           context: .
-          file: Dockerfile.cpu
+          file: ${{ matrix.dockerfile }}
           build-args: |
             FLAVOR=${{ matrix.flavor }}
             VERSION=${{ github.ref_name }}
           push: true
-          platforms: linux/amd64,linux/arm64
+          platforms: ${{ matrix.platforms }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha,scope=${{ matrix.name }}

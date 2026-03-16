@@ -5,7 +5,7 @@ ARG GID=2020
 ARG FLAVOR=full
 ARG VERSION=unknown
 
-ENV XSUITE_CONTAINER_VERSION="${VERSION}-${FLAVOR}"
+ENV XSUITE_CONTAINER_VERSION="${VERSION}-${FLAVOR}-cpu"
 
 RUN groupadd -g ${GID} xsuiteuser \
  && useradd -m -u ${UID} -g ${GID} -s /bin/bash xsuiteuser
