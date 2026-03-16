@@ -1,4 +1,4 @@
-FROM nvidia/cuda:12.8.0-base-ubuntu24.04
+FROM docker.io/nvidia/cuda:12.8.0-base-ubuntu24.04
 
 ARG UID=2020
 ARG GID=2020
@@ -76,5 +76,6 @@ RUN set -eux; \
         > /home/xsuiteuser/.bash_env_mamba \
     && echo 'source /home/xsuiteuser/.bash_env_mamba' >> /home/xsuiteuser/.bashrc
 
+# Set CONDA_PREFIX and CONDA_DEFAULT_ENV to ensure CUDA toolkit is visible by CuPy
 ENV CONDA_PREFIX=$ENV_PREFIX \
-    CONDA_DEFAULT_ENV=$ENV_PREFIX \
+    CONDA_DEFAULT_ENV=$ENV_PREFIX 
