@@ -1,0 +1,72 @@
+FROM nvidia/cuda:12.8.0-base-ubuntu24.04
+
+ARG UID=2020
+ARG GID=2020
+ARG FLAVOR=full
+ARG VERSION=unknown
+
+ENV XSUITE_CONTAINER_VERSION="${VERSION}-${FLAVOR}"
+
+RUN groupadd -g ${GID} xsuiteuser \
+ && useradd -m -u ${UID} -g ${GID} -s /bin/bash xsuiteuser
+
+# Build deps (keep only what you truly need to build wheels / compile)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    wget bzip2 ca-certificates curl git gcc g++ build-essential \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN chown -R xsuiteuser:xsuiteuser /home/xsuiteuser && \
+    chmod 2775 /home/xsuiteuser && \
+    umask 002 && \
+    mkdir -p /home/xsuiteuser/.cache && \
+    chown -R xsuiteuser:xsuiteuser /home/xsuiteuser/.cache && \
+    mkdir -p /home/xsuiteuser/.local/bin && \
+    chown -R xsuiteuser:xsuiteuser /home/xsuiteuser/.local
+
+USER xsuiteuser
+WORKDIR /home/xsuiteuser
+
+ENV ENV_PREFIX=/home/xsuiteuser/xsuite-env
+# micromamba needs a “root prefix” for caches / pkgs (can be small, but must exist)
+ENV MAMBA_ROOT_PREFIX=/home/xsuiteuser/.micromamba
+
+# put the env first on PATH (ensure that we can run commands directly inside env)
+ENV PATH=$ENV_PREFIX/bin:/home/xsuiteuser/.local/bin:$PATH \
+    PIP_NO_CACHE_DIR=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1 \
+    # Ensure default shell is bash and that we are always inside the micromamba environment
+    SHELL=/bin/bash \
+    BASH_ENV=/home/xsuiteuser/.bash_env_mamba
+
+# install micromamba (arch-aware) + create required dirs
+RUN set -eux; \
+    umask 002; \
+    ARCH="$(uname -m)"; \
+    case "$ARCH" in \
+        x86_64|amd64)  MM_ARCH="64" ;; \
+        aarch64|arm64) MM_ARCH="aarch64" ;; \
+        *) echo "Unsupported arch: $ARCH"; exit 1 ;; \
+    esac; \
+    mkdir -p "$MAMBA_ROOT_PREFIX" "$(dirname "$ENV_PREFIX")"; \
+    wget -qO- "https://micro.mamba.pm/api/micromamba/linux-${MM_ARCH}/latest" \
+      | tar -xj -C /home/xsuiteuser/.local/bin --strip-components=1 bin/micromamba; \
+    /home/xsuiteuser/.local/bin/micromamba --version 
+
+COPY --chown=xsuiteuser:xsuiteuser ./envs/${FLAVOR}.yaml /tmp/env.yaml
+
+# Create env directly at prefix
+RUN set -eux; \
+    umask 002; \
+    PIP_VERBOSE=1 micromamba create -y -p "$ENV_PREFIX" -f /tmp/env.yaml && \
+    micromamba install -y -p "$ENV_PREFIX" -c conda-forge cupy cuda-version=12.8 && \
+    micromamba clean -a -f -y && \
+    # extra trimming
+    find "$ENV_PREFIX" -type f -name '*.a' -delete && \
+    find "$ENV_PREFIX" -type f -name '*.pyc' -delete && \
+    find "$ENV_PREFIX" -type d -name '__pycache__' -prune -exec rm -rf {} + && \
+    rm -f /tmp/env.yaml && \
+    printf '%s\n' \
+        'eval "$(micromamba shell hook --shell bash)"' \
+        'micromamba activate /home/xsuiteuser/xsuite-env >/dev/null 2>&1 || true' \
+        > /home/xsuiteuser/.bash_env_mamba \
+    && echo 'source /home/xsuiteuser/.bash_env_mamba' >> /home/xsuiteuser/.bashrc
