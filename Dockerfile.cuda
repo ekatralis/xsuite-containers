@@ -13,6 +13,11 @@ RUN groupadd -g ${GID} xsuiteuser \
 # Build deps (keep only what you truly need to build wheels / compile)
 RUN apt-get update && apt-get install -y --no-install-recommends \
     wget bzip2 ca-certificates curl git gcc g++ build-essential \
+    ocl-icd-libopencl1 \
+    opencl-headers \
+    clinfo \
+    && mkdir -p /etc/OpenCL/vendors \
+    && printf '%s\n' 'libnvidia-opencl.so.1' > /etc/OpenCL/vendors/nvidia.icd \
     && rm -rf /var/lib/apt/lists/*
 
 RUN chown -R xsuiteuser:xsuiteuser /home/xsuiteuser && \
@@ -58,7 +63,7 @@ COPY --chown=xsuiteuser:xsuiteuser ./envs/${FLAVOR}.yaml /tmp/env.yaml
 RUN set -eux; \
     umask 002; \
     PIP_VERBOSE=1 micromamba create -y -p "$ENV_PREFIX" -f /tmp/env.yaml && \
-    micromamba install -y -p "$ENV_PREFIX" -c conda-forge cupy cuda-version=12.8 && \
+    micromamba install -y -p "$ENV_PREFIX" -c conda-forge cupy cuda-version=12.8 pyopencl ocl-icd-system && \
     micromamba clean -a -f -y && \
     # extra trimming
     find "$ENV_PREFIX" -type f -name '*.a' -delete && \
