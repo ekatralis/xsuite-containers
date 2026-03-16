@@ -1,5 +1,8 @@
 Bootstrap: docker
-From: ghcr.io/ekatralis/xsuite-containers:latest
+From: ghcr.io/ekatralis/xsuite-containers:{{ VERSION }}
+
+%arguments
+    VERSION=latest
 
 %environment
     # Unset BASH_ENV for Apptainer, as micromamba is read-only and cannot write to it. 
