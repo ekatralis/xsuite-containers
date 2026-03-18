@@ -111,11 +111,11 @@ The script automatically selects the optimal parameteres for running the noteboo
 
 #### Windows
 
-On Windows, use **PowerShell** (*not Command Prompt*) and run:
+On Windows, use **PowerShell** (*not Command Prompt*) and run. Simply right clicking and selecting 'Open in Terminal' should open PowerShell by default:
 ```powershell
-.\run_jupyter.ps1 -NotebooksDir 'C:\PATH\TO\NOTEBOOKS'
+.\run_jupyter.ps1 "C:\PATH\TO\NOTEBOOKS"
 ```
-Where `C:\PATH\TO\NOTEBOOKS` is an absolute path to the folder containing all the relevant tutorial notebooks. You can obtain that path by opening the folder containing the notebooks on File Explorer, clicking on the navigation bar and copying the directory. This directory inside the notebook environment is mounted under `/workspace`. It is possible that you will be asked whether you trust this script and you want it to run, select yes in all such prompts.
+Where `C:\PATH\TO\NOTEBOOKS` is an absolute path to the folder containing all the relevant tutorial notebooks. You can obtain that path by right clicking the folder where you have your notebooks and selecting 'Copy as Path' (or clicking Ctrl+Shift+C). This directory inside the notebook environment is mounted under `/workspace`. It is possible that you will be asked whether you trust this script and you want it to run, select yes in all such prompts.
 
 Once the script is running you can access the jupyter lab instance on the address:
 
