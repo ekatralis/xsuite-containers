@@ -63,7 +63,8 @@ COPY --chown=xsuiteuser:xsuiteuser ./envs/${FLAVOR}.yaml /tmp/env.yaml
 RUN set -eux; \
     umask 002; \
     PIP_VERBOSE=1 micromamba create -y -p "$ENV_PREFIX" -f /tmp/env.yaml && \
-    micromamba install -y -p "$ENV_PREFIX" -c conda-forge cupy cuda-version=12.8 pyopencl ocl-icd-system && \
+    micromamba install -y -p "$ENV_PREFIX" -c conda-forge cupy cuda-version=12.8 pyopencl ocl-icd-system libcudss && \
+    micromamba run -p "$ENV_PREFIX" pip install nvmath-python && \
     micromamba clean -a -f -y && \
     # extra trimming
     find "$ENV_PREFIX" -type f -name '*.a' -delete && \
