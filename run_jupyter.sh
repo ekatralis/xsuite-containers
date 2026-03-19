@@ -5,10 +5,11 @@ IMAGE="ghcr.io/ekatralis/xsuite-containers:latest"
 PORT="${PORT:-8888}"
 ENGINE="${ENGINE:-}"
 JUPYTER_TOKEN="${JUPYTER_TOKEN:-"xsuite"}"
+GPU="${GPU:-}"
 
 usage() {
   echo "Usage: $0 /PATH/TO/NOTEBOOKS"
-  echo "Env: PORT=8888 (optional), ENGINE=docker|podman (optional, auto-detected), JUPYTER_TOKEN=auto|<token> (optional, default 'xsuite')"
+  echo "Env: PORT=8888 (optional), ENGINE=docker|podman (optional, auto-detected), JUPYTER_TOKEN=auto|<token> (optional, default 'xsuite'), GPU=NVIDIA|AMD (optional, default empty)"
 }
 
 NOTEBOOKS_DIR="${1:-}"
@@ -39,6 +40,23 @@ if [[ -z "${ENGINE}" ]]; then
 fi
 
 echo "Using container engine: ${ENGINE}"
+ENGINE_ARGS=("-e" "HOME=/home/xsuiteuser/")
+if [[ "${GPU}" == "NVIDIA" ]]; then
+  IMAGE+="-cuda12.8"
+  echo "GPU mode enabled: NVIDIA; using image ${IMAGE}"
+  if [[ "${ENGINE}" == "docker" ]]; then
+    ENGINE_ARGS+=( "--gpus" "all" "--runtime" "nvidia" )
+  else
+    ENGINE_ARGS+=( "--device" "nvidia.com/gpu=all" )
+  fi
+elif [[ "${GPU}" == "AMD" ]]; then
+  echo "ROCm container not implemented yet"
+  exit 1
+elif [[ -n "${GPU}" ]]; then
+  echo "Unsupported GPU type: ${GPU}"
+  exit 1
+fi
+
 echo "Pulling image: ${IMAGE}"
 "${ENGINE}" pull "${IMAGE}"
 
@@ -56,7 +74,6 @@ OS="$(uname -s)"
 
 # Build engine args depending on OS + podman mode rules
 [[ -e /sys/fs/selinux/enforce ]] && MOUNT_SUFFIX=":Z" || MOUNT_SUFFIX=""
-ENGINE_ARGS=("-e" "HOME=/home/xsuiteuser/")
 VOLUME_ARG=( -v "${NOTEBOOKS_DIR}:/workspace${MOUNT_SUFFIX}" )
 PORT_ARG=( -p "${PORT}:8888" )
 
