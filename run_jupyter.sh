@@ -56,13 +56,13 @@ OS="$(uname -s)"
 
 # Build engine args depending on OS + podman mode rules
 [[ -e /sys/fs/selinux/enforce ]] && MOUNT_SUFFIX=":Z" || MOUNT_SUFFIX=""
-ENGINE_ARGS=()
+ENGINE_ARGS=("-e" "HOME=/home/xsuiteuser/")
 VOLUME_ARG=( -v "${NOTEBOOKS_DIR}:/workspace${MOUNT_SUFFIX}" )
 PORT_ARG=( -p "${PORT}:8888" )
 
 if [[ "${ENGINE}" == "docker" ]]; then
   # Docker is the same as podman rootful mode but requires specifying the home directory
-  ENGINE_ARGS+=(  "--user" "$(id -u):$(id -g)" "--group-add" "2020" "-e" "HOME=/home/xsuiteuser/" )
+  ENGINE_ARGS+=(  "--user" "$(id -u):$(id -g)" "--group-add" "2020")
 elif [[ "${OS}" == "Darwin" ]]; then
   # macOS podman runs in a VM (rootful), use macOS-specific user/group setup
   ENGINE_ARGS+=( "--user" "$(id -u):$(id -g)" "--group-add" "2020" )
