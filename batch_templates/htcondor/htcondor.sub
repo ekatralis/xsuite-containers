@@ -1,12 +1,12 @@
-universe                = docker
-docker_image            = registry.cern.ch/ghcr.io/ekatralis/xsuite-slim:latest
-executable              = print_info.sh
-arguments               = /etc/hosts
-transfer_input_files    = 
-should_transfer_files   = YES
-when_to_transfer_output = ON_EXIT
-output                  = out.$(ClusterId).$(ProcId)
-error                   = err.$(ClusterId).$(ProcId)
+executable              = run.sh
+arguments               = "python simulation.py"
+output                  = $(folder).out
+error                   = $(folder).err
 log                     = log.$(ClusterId)
-request_memory          = 100M
-queue 1
+should_transfer_files   = YES
+transfer_input_files    = simulation.py, wake_lhc_injection.dat, $(folder)/sim_params.py
+output_destination      = root://eosuser.cern.ch//eos/user/e/ekatrali/xsuite-apptainer-demo/results/
+when_to_transfer_output = ON_EXIT
+transfer_output_files   = $(folder)_bunches.h5, $(folder)_slices.h5
+MY.XRDCP_CREATE_DIR     = True
+queue folder from scan_dirs.txt

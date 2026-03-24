@@ -4,6 +4,8 @@ This repository provides Docker/Podman container definitions to create consisten
 
 **Purpose:** Provide a repeatable, cross-platform container that ships a conda-based `xsuite` environment and can be run interactively to host Jupyter Lab sessions for tutorials.
 
+This `README` contains information about using containers for running jupyter/notebook environments on a local/remote machine. For information on how to use container infastructure on HTCondor, consult [batch_templates/htcondor/README.md](batch_templates/htcondor/README.md)
+
 ## Prerequisites
 The only pre-requisite for this repository is a working installation of `podman` or `docker`. It is highly recommended to use `podman` to avoid potential permission issues, however the scripts in this repository have been tested and work with `docker` as well.
 
