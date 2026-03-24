@@ -131,6 +131,13 @@ The script automatically selects the optimal parameteres for running the noteboo
 - `Port`: Select which port to forward to on localhost. Default is `8888`
 - `JUPYTER_TOKEN`: The token for the jupyter server. By default it is `xsuite`, you can set a custom value or set to `auto` to let the jupyter server randomly generate one.
 
+### Version checks
+For reproducibility purposes it is highly recommended to add a cell to the notebook that runs the command:
+```bash
+echo $XSUITE_CONTAINER_VERSION
+```
+This prints the version of the container that you are using. As long as you are using the same container version, the results are guaranteed to be 100% reproducible.
+
 ## Cleanup (Post-Tutorial and Optional)
 
 After all tutorial sessions are over, you may want to remove the container from your disk to reduce disk usage. Please note that re-running the scripts will re-download the container if you have removed it. 
