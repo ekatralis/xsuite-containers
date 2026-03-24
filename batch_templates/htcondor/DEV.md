@@ -174,12 +174,8 @@ From: ghcr.io/ekatralis/xsuite-containers:latest
 ```
 Then we can build this container by running:
 ```bash
-apptainer build xsuitecontainer.sif Apptainer-custom.sif
+apptainer build xsuitecontainer.sif Apptainer-custom.def
 ```
 The resulting container can be used exactly as described before.
 #### Use an editable overlay
-
-Apptainer also supports the use of editable overlays on top of the container. Using an editable overlay allows you to interactively edit the container and include your desired packages.
-
-
 
