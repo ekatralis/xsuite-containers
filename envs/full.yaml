@@ -10,5 +10,5 @@ dependencies:
   - pytest-mock
   - pip
   - pip:
-      - xsuite[full_env]==0.48.1
+      - xsuite[full_env]==0.48.4
       - xwakes[tests]
