@@ -2,7 +2,7 @@ name: xsuite-env
 channels:
   - conda-forge
 dependencies:
-  - python=3.12
+  - python=3.13
   - mpi4py
   - mpmath
   - h5py
