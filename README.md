@@ -140,6 +140,8 @@ echo $XSUITE_CONTAINER_VERSION
 ```
 This prints the version of the container that you are using. As long as you are using the same container version, the results are guaranteed to be 100% reproducible.
 
+As of xsuite version 0.49.0, the container version number and the xsuite version number are fully aligned.
+
 ## Cleanup (Post-Tutorial and Optional)
 
 After all tutorial sessions are over, you may want to remove the container from your disk to reduce disk usage. Please note that re-running the scripts will re-download the container if you have removed it. 
