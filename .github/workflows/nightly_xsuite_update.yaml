@@ -3,7 +3,7 @@ name: Sync version from latest tag
 
 on:
   schedule:
-    - cron: "0 2 * * *" # nightly at 02:00 UTC
+    - cron: "0 0 * * 1-5" # nightly at 00:00 UTC on weekdays
   workflow_dispatch:
 
 permissions:
