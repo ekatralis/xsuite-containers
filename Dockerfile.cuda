@@ -1,11 +1,11 @@
-FROM docker.io/nvidia/cuda:12.8.0-base-ubuntu24.04
+FROM docker.io/nvidia/cuda:12.9.0-base-ubuntu24.04
 
 ARG UID=2020
 ARG GID=2020
 ARG FLAVOR=full
 ARG VERSION=unknown
 
-ENV XSUITE_CONTAINER_VERSION="${VERSION}-${FLAVOR}-cuda12.8"
+ENV XSUITE_CONTAINER_VERSION="${VERSION}-${FLAVOR}-cuda12.9"
 
 RUN groupadd -g ${GID} xsuiteuser \
  && useradd -m -u ${UID} -g ${GID} -s /bin/bash xsuiteuser
@@ -63,7 +63,7 @@ COPY --chown=xsuiteuser:xsuiteuser ./envs/${FLAVOR}.yaml /tmp/env.yaml
 RUN set -eux; \
     umask 002; \
     PIP_VERBOSE=1 micromamba create -y -p "$ENV_PREFIX" -f /tmp/env.yaml && \
-    micromamba install -y -p "$ENV_PREFIX" -c conda-forge cupy cuda-version=12.8 pyopencl ocl-icd-system libcudss && \
+    micromamba install -y -p "$ENV_PREFIX" -c conda-forge cupy cuda-version=12.9 pyopencl ocl-icd-system libcudss && \
     micromamba run -p "$ENV_PREFIX" pip install nvmath-python && \
     micromamba clean -a -f -y && \
     # extra trimming
