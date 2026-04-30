@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-CONTAINER_FULLPATH="/cvmfs/unpacked.cern.ch/ghcr.io/ekatralis/xsuite-containers:latest-cuda12.9"
+CONTAINER_FULLPATH="/cvmfs/unpacked.cern.ch/ghcr.io/ekatralis/xsuite-containers:latest-cuda"
 containerrun() {
   apptainer exec \
     --env PYTHONNOUSERSITE=1 \
