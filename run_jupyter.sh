@@ -42,7 +42,7 @@ fi
 echo "Using container engine: ${ENGINE}"
 ENGINE_ARGS=("-e" "HOME=/home/xsuiteuser/")
 if [[ "${GPU}" == "NVIDIA" ]]; then
-  IMAGE+="-cuda12.9"
+  IMAGE+="-cuda"
   echo "GPU mode enabled: NVIDIA; using image ${IMAGE}"
   if [[ "${ENGINE}" == "docker" ]]; then
     ENGINE_ARGS+=( "--gpus" "all" "--runtime" "nvidia" )
