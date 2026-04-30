@@ -37,7 +37,7 @@ jobs:
             image: ghcr.io/ekatralis/xsuite-containers
             dockerfile: Dockerfile.cuda
             platforms: linux/amd64
-            tag_suffix: "-cuda12.9"
+            tag_suffix: "-cuda"
 
     steps:
       - name: Checkout
