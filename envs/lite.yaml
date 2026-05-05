@@ -7,5 +7,5 @@ dependencies:
   - h5py
   - pip
   - pip:
-      - xsuite==0.50.4
+      - xsuite==0.50.5
       - xwakes
