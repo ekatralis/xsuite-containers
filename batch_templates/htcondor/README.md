@@ -1,6 +1,26 @@
 # Using Containers on HTCondor
 
 This purpose of this documentation is to explain how to run xsuite simulations using the containers defined in this repository on CERN's cluster using HTCondor. 
+
+> [!IMPORTANT]
+> Between versions `0.49.1` and `0.51.2` a bug was introduced with a newer version of IPython which can lead to permission issues when running the cvmfs containers using Apptainer. The issue can be fixed by adding this line before importing `xtrack` or `xsuite`:
+```python
+import sys
+import types
+from tqdm.std import tqdm
+
+def tqdm_notebook(*args, **kwargs):
+    return None
+
+fake_notebook = types.ModuleType("tqdm.notebook")
+fake_notebook.tqdm = tqdm_notebook
+fake_notebook.tqdm_notebook = tqdm_notebook
+
+sys.modules["tqdm.notebook"] = fake_notebook
+
+import xtrack as xt
+```
+
 ## Parameter Scan
 On CERN clusters, the container is published on `cvmfs` under the path:
 ```text
