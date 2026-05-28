@@ -5,6 +5,11 @@ on:
     tags:
       - "v*.*.*"
   workflow_dispatch:
+    inputs:
+      push:
+        description: "Push images"
+        required: false
+        default: "false"
 
 permissions:
   contents: read
@@ -124,7 +129,7 @@ jobs:
           build-args: |
             FLAVOR=${{ matrix.flavor }}
             VERSION=${{ github.ref_name }}
-          push: true
+          push: ${{ github.event_name == 'push' || inputs.push == 'true' }}
           platforms: ${{ matrix.platforms }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
