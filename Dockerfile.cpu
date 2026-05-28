@@ -1,4 +1,4 @@
-FROM ubuntu:24.04
+FROM ubuntu:24.04 AS base
 
 ARG UID=2020
 ARG GID=2020
@@ -52,12 +52,15 @@ RUN set -eux; \
       | tar -xj -C /home/xsuiteuser/.local/bin --strip-components=1 bin/micromamba; \
     /home/xsuiteuser/.local/bin/micromamba --version 
 
+FROM base AS builder
+
 COPY --chown=xsuiteuser:xsuiteuser ./envs/${FLAVOR}.yaml /tmp/env.yaml
+COPY --chown=xsuiteuser:xsuiteuser ./wheels /tmp/wheels
 
 # Create env directly at prefix
 RUN set -eux; \
     umask 002; \
-    PIP_VERBOSE=1 micromamba create -y -p "$ENV_PREFIX" -f /tmp/env.yaml && \
+    PIP_VERBOSE=1 PIP_FIND_LINKS=/tmp/wheels PIP_PREFER_BINARY=1 micromamba create -y -p "$ENV_PREFIX" -f /tmp/env.yaml && \
     micromamba clean -a -f -y && \
     # extra trimming
     find "$ENV_PREFIX" -type f -name '*.a' -delete && \
@@ -69,3 +72,9 @@ RUN set -eux; \
         'micromamba activate /home/xsuiteuser/xsuite-env >/dev/null 2>&1 || true' \
         > /home/xsuiteuser/.bash_env_mamba \
     && echo 'source /home/xsuiteuser/.bash_env_mamba' >> /home/xsuiteuser/.bashrc
+
+FROM base AS final
+
+COPY --from=builder --chown=xsuiteuser:xsuiteuser \
+    /home/xsuiteuser/ \
+    /home/xsuiteuser/
