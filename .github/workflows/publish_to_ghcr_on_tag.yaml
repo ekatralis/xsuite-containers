@@ -11,7 +11,47 @@ permissions:
   packages: write
 
 jobs:
+  build-arm64-wheels:
+    runs-on: ubuntu-24.04-arm # Use an ARM64 runner
+    steps:
+      - name: Install build tools
+        run: |
+          apt-get update
+          apt-get install -y build-essential gcc
+      - uses: actions/checkout@v4
+
+      - name: Extract Python version
+        id: pyver
+        run: |
+          PYTHON_VERSION=$(
+            awk -F= '/^[[:space:]]*-[[:space:]]*python=/{print $2}' envs/full.yaml
+          )
+
+          XSUITE_VERSION=$(
+            awk -F'==' '/xsuite\[full_env\]==/ {print $2}' envs/full.yaml
+          )
+
+          echo "python_version=$PYTHON_VERSION" >> "$GITHUB_OUTPUT"
+          echo "xsuite_version=$XSUITE_VERSION" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ steps.pyver.outputs.python_version }}
+
+      - name: Build wheels
+        run: |
+          python -m pip install -U pip wheel build
+          mkdir -p wheelhouse
+          python -m pip wheel "xsuite[full_env]==${{ steps.pyver.outputs.xsuite_version }}" "xwakes[tests]" \
+            --wheel-dir wheelhouse
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: wheels-linux-arm64
+          path: wheelhouse/*.whl
+
   build-and-push:
+    needs: build-arm64-wheels
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -23,6 +63,7 @@ jobs:
             dockerfile: Dockerfile.cpu
             platforms: linux/amd64,linux/arm64
             tag_suffix: ""
+            gpu_stack: ""
 
           - name: lite-cpu
             flavor: lite
@@ -58,6 +99,13 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Download ARM64 wheels
+        if: contains(matrix.platforms, 'arm64')
+        uses: actions/download-artifact@v4
+        with:
+          name: wheels-linux-arm64
+          path: wheels
 
       - name: Extract Docker metadata
         id: meta
