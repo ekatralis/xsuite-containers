@@ -3,7 +3,7 @@
 This purpose of this documentation is to explain how to run xsuite simulations using the containers defined in this repository on CERN's cluster using HTCondor. 
 
 > [!IMPORTANT]
-> Between versions `0.49.1` and `0.51.2` a bug was introduced with a newer version of IPython which can lead to permission issues when running the cvmfs containers using Apptainer. The issue can be fixed by adding this line before importing `xtrack` or `xsuite`:
+> Between versions `0.49.1` and `0.52.1` a bug was introduced with a newer version of IPython which can lead to permission issues when running the cvmfs containers using Apptainer. The issue can be fixed by adding this line before importing `xtrack` or `xsuite`:
 ```python
 import sys
 import types
