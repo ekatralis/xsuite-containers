@@ -178,4 +178,4 @@ podman rmi hash-of-image-you-want-to-remove
 ```
 
 ## Details for Developers/Notebook Creators
-If you want more details on how to run the containers on different systems or about the container building process, consult the `DEV.md` file in this repository.
+If you want more details on how to run the containers on different systems or about the container building process, consult the `docs/DEV.md` file in this repository.
