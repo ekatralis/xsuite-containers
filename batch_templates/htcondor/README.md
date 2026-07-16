@@ -2,24 +2,30 @@
 
 This purpose of this documentation is to explain how to run xsuite simulations using the containers defined in this repository on CERN's cluster using HTCondor. 
 
-> [!IMPORTANT]
-> Between versions `0.49.1` and `0.53.1` a bug was introduced with a newer version of IPython which can lead to permission issues when running the cvmfs containers using Apptainer. The issue can be fixed by adding this line before importing `xtrack` or `xsuite`:
-```python
-import sys
-import types
-from tqdm.std import tqdm
+## Known bugs in past versions
+- Between versions `0.49.1` and `0.53.1` a bug was introduced with a newer version of IPython which can lead to permission issues when running the cvmfs containers using Apptainer. The issue can be fixed by adding this line before importing `xtrack` or `xsuite`:
+    ```python
+    import sys
+    import types
+    from tqdm.std import tqdm
 
-def tqdm_notebook(*args, **kwargs):
-    return None
+    def tqdm_notebook(*args, **kwargs):
+        return None
 
-fake_notebook = types.ModuleType("tqdm.notebook")
-fake_notebook.tqdm = tqdm_notebook
-fake_notebook.tqdm_notebook = tqdm_notebook
+    fake_notebook = types.ModuleType("tqdm.notebook")
+    fake_notebook.tqdm = tqdm_notebook
+    fake_notebook.tqdm_notebook = tqdm_notebook
 
-sys.modules["tqdm.notebook"] = fake_notebook
+    sys.modules["tqdm.notebook"] = fake_notebook
 
-import xtrack as xt
-```
+    import xtrack as xt
+    ```
+- (Unfixed): When using the container published on cvmfs, some xcoll functions try to create config files inside the package directory, which is read-only. This can result in an import error. On some versions importing xsuite will cause the failing path to be triggered resulting in an import error for xsuite as well. The fix for this bug is to append the following flags when using calling `apptainer`:
+    ```
+    --bind "$TMPDIR/.xcoll/config:/home/xsuiteuser/xsuite-env/lib/python3.13/site-packages/xcoll/config"
+    --bind "$TMPDIR/.xcoll/lib:/home/xsuiteuser/xsuite-env/lib/python3.13/site-packages/xcoll/lib"
+    ```
+    These flags bind mount the problematic directories to writeable temporary directories. 
 
 ## Parameter Scan
 On CERN clusters, the container is published on `cvmfs` under the path:
