@@ -25,7 +25,11 @@ This purpose of this documentation is to explain how to run xsuite simulations u
     --bind "$TMPDIR/.xcoll/config:/home/xsuiteuser/xsuite-env/lib/python3.13/site-packages/xcoll/config"
     --bind "$TMPDIR/.xcoll/lib:/home/xsuiteuser/xsuite-env/lib/python3.13/site-packages/xcoll/lib"
     ```
-    These flags bind mount the problematic directories to writeable temporary directories. 
+    These flags bind mount the problematic directories to writeable temporary directories. Ensure that these temporary directories are created before apptainer is called:
+    ```bash
+    mkdir -p $TMPDIR/.xcoll/config
+    mkdir -p $TMPDIR/.xcoll/lib
+    ```
 
 ## Parameter Scan
 On CERN clusters, the container is published on `cvmfs` under the path:
