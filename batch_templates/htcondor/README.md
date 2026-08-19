@@ -20,7 +20,7 @@ This purpose of this documentation is to explain how to run xsuite simulations u
 
     import xtrack as xt
     ```
-- (Unfixed): When using the container published on cvmfs, some xcoll functions try to create config files inside the package directory, which is read-only. This can result in an import error. On some versions importing xsuite will cause the failing path to be triggered resulting in an import error for xsuite as well. The fix for this bug is to append the following flags when using calling `apptainer`:
+- For versions older than `0.56.0`, when using the container published on cvmfs, some xcoll functions try to create config files inside the package directory, which is read-only. This can result in an import error. On some versions importing xsuite will cause the failing path to be triggered resulting in an import error for xsuite as well. The fix for this bug is to append the following flags when using calling `apptainer`:
     ```
     --bind "$TMPDIR/.xcoll/config:/home/xsuiteuser/xsuite-env/lib/python3.13/site-packages/xcoll/config"
     --bind "$TMPDIR/.xcoll/lib:/home/xsuiteuser/xsuite-env/lib/python3.13/site-packages/xcoll/lib"
