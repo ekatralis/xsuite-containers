@@ -6,6 +6,7 @@ dependencies:
   - mpmath
   - h5py
   - pip
+  - setuptools
   - pip:
       - xsuite==0.59.7
       - xwakes

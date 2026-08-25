@@ -8,6 +8,7 @@ dependencies:
   - h5py
   - pytest
   - pytest-mock
+  - setuptools
   - pip
   - pip:
       - xsuite[full_env]==0.59.7
