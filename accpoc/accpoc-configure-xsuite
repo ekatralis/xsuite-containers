@@ -52,6 +52,7 @@ kubectl patch notebook "$NOTEBOOK" \
             \"op\": \"add\",
             \"path\": \"/spec/template/spec/securityContext\",
             \"value\": {
+	        \"fsGroup\" : 100, 
                 \"supplementalGroups\": [2020]
             }
         },
