@@ -44,8 +44,6 @@ echo "Notebook URL:  $NB_PREFIX"
 echo "Notebook:      $NOTEBOOK"
 echo "---------------------------------------------------------"
 
-echo "Waiting for pod to initialize"
-
 kubectl patch notebook "$NOTEBOOK" \
     -n "$CERN_USERNAME" \
     --type=json \
@@ -83,3 +81,67 @@ kubectl patch notebook "$NOTEBOOK" \
         }
     ]"
 
+echo "Waiting for Notebook controller to update StatefulSet..."
+
+for i in $(seq 1 30); do
+    COMMAND=$(
+        kubectl get sts "$NOTEBOOK" \
+            -n "$CERN_USERNAME" \
+            -o jsonpath='{.spec.template.spec.containers[0].command[0]}' \
+            2>/dev/null || true
+    )
+
+    if [ "$COMMAND" = "jupyter" ]; then
+        break
+    fi
+
+    sleep 2
+done
+
+if [ "$COMMAND" != "jupyter" ]; then
+    echo "ERROR: StatefulSet was not updated with command=jupyter"
+    exit 1
+fi
+
+echo "Restarting notebook pod..."
+
+kubectl delete pod \
+    -n "$CERN_USERNAME" \
+    -l notebook-name="$NOTEBOOK" \
+    --wait=true
+
+echo "Waiting for replacement pod..."
+
+POD=""
+
+for i in $(seq 1 60); do
+    POD=$(
+        kubectl get pod \
+            -n "$CERN_USERNAME" \
+            -l notebook-name="$NOTEBOOK" \
+            -o jsonpath='{.items[0].metadata.name}' \
+            2>/dev/null || true
+    )
+
+    if [ -n "$POD" ]; then
+        break
+    fi
+
+    sleep 1
+done
+
+if [ -z "$POD" ]; then
+    echo "ERROR: Replacement notebook pod was not created"
+    exit 1
+fi
+
+echo "Waiting for $POD to become Ready..."
+
+kubectl wait \
+    --for=condition=Ready \
+    "pod/$POD" \
+    -n "$CERN_USERNAME" \
+    --timeout=300s
+
+echo "Notebook is ready."
+echo "Try accessing via ssh ${NOTEBOOK}@accpoc.cern.ch or via the UI at https://accpoc.cern.ch"
