@@ -44,6 +44,23 @@ echo "Notebook URL:  $NB_PREFIX"
 echo "Notebook:      $NOTEBOOK"
 echo "---------------------------------------------------------"
 
+IMAGE=$(
+    kubectl get notebook "$NOTEBOOK" \
+        -n "$CERN_USERNAME" \
+        -o jsonpath='{.spec.template.spec.containers[0].image}'
+) || {
+    echo "ERROR: Could not get image for notebook $NOTEBOOK" >&2
+    exit 1
+}
+
+if [[ "$IMAGE" != "ghcr.io/ekatralis/xsuite-containers:"* ]]; then
+    echo "ERROR: Unsupported notebook image: $IMAGE" >&2
+    echo "Ensure that the notebook is using an image from: ghcr.io/ekatralis/xsuite-containers:<tag>" >&2
+    exit 1
+fi
+
+echo "Detected notebook with image: $IMAGE"
+
 kubectl patch notebook "$NOTEBOOK" \
     -n "$CERN_USERNAME" \
     --type=json \
@@ -145,4 +162,7 @@ kubectl wait \
     --timeout=300s
 
 echo "Notebook is ready."
-echo "Try accessing via ssh ${NOTEBOOK}@accpoc.cern.ch or via the UI at https://accpoc.cern.ch"
+echo "Try accessing via:"
+echo " 	ssh ${NOTEBOOK}@accpoc.cern.ch" 
+echo "or via the UI at:"
+echo "	https://accpoc.cern.ch/notebook/${CERN_USERNAME}/${NOTEBOOK}/lab?"
