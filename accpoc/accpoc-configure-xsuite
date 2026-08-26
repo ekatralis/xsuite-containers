@@ -1,0 +1,85 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+NOTEBOOK="${1:-}"
+
+if [[ $# -gt 1 ]]; then
+    echo "Notebook name cannot contain spaces"
+    echo "[Usage] $0 <notebook-name>"
+    exit 1
+fi
+
+if [[ -z "$NOTEBOOK" ]]; then
+    echo "[Usage] $0 <notebook-name>"
+    exit 1
+fi
+
+CERN_USERNAME="${CERN_USERNAME:-}"
+
+if [[ -z "$CERN_USERNAME" ]]; then
+    CERN_USERNAME=$(
+        klist 2>/dev/null \
+        | grep -oE '[^[:space:]]+@CERN\.CH' \
+        | sed 's/@CERN\.CH$//' \
+        | head -n 1
+    )
+
+    if [[ -z "$CERN_USERNAME" ]]; then
+        echo "Username is auto-detected through your Kerberos token."
+        echo "Please run:"
+        echo "  kinit yourusername@CERN.CH"
+        echo
+        echo "If Kerberos is not installed, set the environment variable CERN_USERNAME manually."
+        exit 1
+    fi
+fi
+
+EOS_HOME="/eos/user/${CERN_USERNAME:0:1}/${CERN_USERNAME}"
+NB_PREFIX="/notebook/${CERN_USERNAME}/${NOTEBOOK}"
+
+echo "Configuring notebook server with the following parameters"
+echo "CERN username: $CERN_USERNAME"
+echo "EOS home:      $EOS_HOME"
+echo "Notebook URL:  $NB_PREFIX"
+echo "Notebook:      $NOTEBOOK"
+echo "---------------------------------------------------------"
+
+echo "Waiting for pod to initialize"
+
+kubectl patch notebook "$NOTEBOOK" \
+    -n "$CERN_USERNAME" \
+    --type=json \
+    -p="[
+        {
+            \"op\": \"add\",
+            \"path\": \"/spec/template/spec/securityContext\",
+            \"value\": {
+                \"supplementalGroups\": [2020]
+            }
+        },
+        {
+            \"op\": \"add\",
+            \"path\": \"/spec/template/spec/containers/0/args\",
+            \"value\": [
+                \"lab\",
+                \"--notebook-dir=${EOS_HOME}\",
+                \"--ip=0.0.0.0\",
+                \"--no-browser\",
+                \"--port=8888\",
+                \"--ServerApp.token=\",
+                \"--ServerApp.password=\",
+                \"--ServerApp.allow_origin=*\",
+                \"--ServerApp.allow_remote_access=True\",
+                \"--ServerApp.authenticate_prometheus=False\",
+                \"--ServerApp.base_url=${NB_PREFIX}\",
+                \"--ServerApp.websocket_ping_timeout=0\",
+                \"--ServerApp.websocket_ping_interval=0\"
+            ]
+        },
+        {
+            \"op\": \"add\",
+            \"path\": \"/spec/template/spec/containers/0/command\",
+            \"value\": [\"jupyter\"]
+        }
+    ]"
+
