@@ -50,8 +50,10 @@ kubectl patch notebook "$NOTEBOOK" \
     -p="[
         {
             \"op\": \"add\",
-            \"path\": \"/spec/template/spec/securityContext/supplementalGroups\",
-            \"value\": [2020]
+            \"path\": \"/spec/template/spec/securityContext\",
+            \"value\": {
+                \"supplementalGroups\": [2020]
+            }
         },
         {
             \"op\": \"add\",
