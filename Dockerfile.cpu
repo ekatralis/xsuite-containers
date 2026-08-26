@@ -78,3 +78,7 @@ FROM base AS final
 COPY --from=builder --chown=xsuiteuser:xsuiteuser \
     /home/xsuiteuser/ \
     /home/xsuiteuser/
+
+# Facilitate package installation in interactive sessions
+ENV CONDA_PREFIX=$ENV_PREFIX \
+    CONDA_DEFAULT_ENV=$ENV_PREFIX 
