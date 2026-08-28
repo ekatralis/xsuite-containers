@@ -69,7 +69,7 @@ kubectl patch notebook "$NOTEBOOK" \
             \"op\": \"add\",
             \"path\": \"/spec/template/spec/securityContext\",
             \"value\": {
-	        \"fsGroup\" : 100, 
+                \"fsGroup\" : 100,
                 \"supplementalGroups\": [2020]
             }
         },
@@ -96,7 +96,22 @@ kubectl patch notebook "$NOTEBOOK" \
             \"op\": \"add\",
             \"path\": \"/spec/template/spec/containers/0/command\",
             \"value\": [\"jupyter\"]
+        },
+        {
+            \"op\": \"add\",
+            \"path\": \"/spec/template/spec/containers/0/env\",
+            \"value\": [
+                {
+                    \"name\": \"PYTHONUSERSITE\",
+                    \"value\": \"0\"
+                },
+                {
+                    \"name\": \"PYTHONNOUSERSITE\",
+                    \"value\": \"1\"
+                }
+            ]
         }
+
     ]"
 
 echo "Waiting for Notebook controller to update StatefulSet..."
