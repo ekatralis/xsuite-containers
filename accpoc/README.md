@@ -12,7 +12,43 @@ kubectl config use-context accpoc
 ```
 These configure your `kubectl` plugin to point to the AccPOC cluster.
 
+## Configuring a notebook
+To set up a notebook using xsuite-containers on AccPoC follow these steps:
+- Visit https://accpoc.cern.ch/ and click on **Notebooks** and then **+ New Notebook**
+- Name the notebook (name cannot contain "_" and spaces, only "-"). Leave the rest of the options to default.
+- Select the desired CPU or GPU flavor (Number of CPUs/GPUs and corresponding RAM capacity) depending on your workload.
+- Click on **Custom Notebook**, then **Advanced Options**, and then tick the **Custom Image** box.
+  - For GPU notebooks use:
+    ```text
+    ghcr.io/ekatralis/xsuite-containers:latest-cuda
+    ```
+  - For CPU only notebooks use:
+    ```text
+    ghcr.io/ekatralis/xsuite-containers:latest
+    ```
+- Launch the notebook
+- Clone the repository and go into the `accpoc` directory:
+  ```bash
+  git clone https://github.com/ekatralis/xsuite-containers.git
+  cd xsuite-containers/accpoc 
+  ```
+  or download the script and make it executable:
+  ```bash
+  wget https://raw.githubusercontent.com/ekatralis/xsuite-containers/refs/heads/main/accpoc/accpoc-configure-xsuite
+  chmod +x accpoc-configure-xsuite
+  ```
+- Run the script with the notebook name as the only argument:
+  ```bash
+  ./accpoc-configure-xsuite <notebook-name>
+  ```
+- You can then access the notebook either through `ssh` or throught the web UI.
 
+While running the script you might encounter the following prompt:
+```text
+Please visit the following URL in your browser: https://auth.cern.ch/auth/realms/cern/protocol/openid-connect/auth?...
+Enter code:
+```
+This is used to authenticate with the cluster, so simply copy the link in your browser, paste the code you get into your terminal and click enter.
 
 ## Setting up kubectl locally (Optional)
 On Linux, you can download the `kubectl` executable using:
