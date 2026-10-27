@@ -8,5 +8,5 @@ dependencies:
   - pip
   - setuptools
   - pip:
-      - xsuite==0.66.4
+      - xsuite==0.67.0
       - xwakes
