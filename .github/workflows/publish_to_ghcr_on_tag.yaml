@@ -73,18 +73,10 @@ jobs:
     strategy:
       matrix:
         include:
-          # CPU images (no suffix)
+          # CPU image (no suffix)
           - name: full-cpu
             flavor: full
             image: ghcr.io/ekatralis/xsuite-containers
-            dockerfile: Dockerfile.cpu
-            platforms: linux/amd64,linux/arm64
-            tag_suffix: ""
-            gpu_stack: ""
-
-          - name: lite-cpu
-            flavor: lite
-            image: ghcr.io/ekatralis/xsuite-slim
             dockerfile: Dockerfile.cpu
             platforms: linux/amd64,linux/arm64
             tag_suffix: ""

@@ -1,7 +1,7 @@
 ENGINE="${ENGINE:-}"
 
 usage() {
-  echo "Usage: $0 link.to.container/image:tag (optional, default 'ghcr.io/ekatralis/xsuite-slim:latest') exported_image_name (optional, default 'xsuite-slim.tar')"
+  echo "Usage: $0 link.to.container/image:tag (optional, default 'ghcr.io/ekatralis/xsuite-containers:latest') exported_image_name (optional, default 'xsuite-container.tar')"
   echo "Env: ENGINE=docker|podman (optional, auto-detected), JUPYTER_TOKEN=auto|<token> (optional, default 'xsuite')"
 }
 
@@ -11,8 +11,8 @@ if [[ "$1" == "-h" ]] || [[ "$1" == "--help" ]]; then
     exit 0
 fi
 
-IMAGE="${1:-"ghcr.io/ekatralis/xsuite-slim:latest"}"
-EXPORTED_IMAGE_NAME="${2:-"xsuite-slim.tar"}"
+IMAGE="${1:-"ghcr.io/ekatralis/xsuite-containers:latest"}"
+EXPORTED_IMAGE_NAME="${2:-"xsuite-container.tar"}"
 
 if [[ -z "${ENGINE}" ]]; then
     echo "Automatically selecting container engine..."
