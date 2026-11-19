@@ -11,5 +11,5 @@ dependencies:
   - setuptools
   - pip
   - pip:
-      - xsuite[full_env]==0.69.0
+      - xsuite[full_env]==0.69.1
       - xwakes[tests]
