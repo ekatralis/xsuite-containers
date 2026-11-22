@@ -1,0 +1,174 @@
+# ROCm counterpart of Dockerfile.cuda
+#
+# ROCm comes from a self-contained TheRock tarball (built for one GPU
+# architecture) and CuPy from AMD's ROCm build (amd-cupy).
+#
+# Architectures with a premade recipe (ROCm tarball + CuPy build preset):
+#   gfx908  (MI100)  -> ROCm 10.2.0 stable
+#   gfx906  (MI50/60)-> ROCm 10.3.0a20261031 nightly (experimental)
+#
+# Any other architecture needs BOTH a ROCm tarball and a matching CuPy build:
+#   docker build -f Dockerfile.rocm \
+#     --build-arg GPU_ARCH=gfx90a \
+#     --build-arg ROCM_TARBALL_URL=https://.../therock-dist-linux-gfx90a-<ver>.tar.gz \
+#     --build-arg CUPY_BUILD=amd-cupy==<ver>      # or a wheel URL / path
+#     -t xsuite:rocm-gfx90a .
+#
+# TheRock tarballs: https://rocm.devreleases.amd.com/tarball-multi-arch/
+#
+# Run with GPU access:
+#   docker run --device=/dev/kfd --device=/dev/dri --group-add video \
+#              --group-add render --security-opt seccomp=unconfined ...
+FROM docker.io/library/ubuntu:24.04
+
+ARG UID=2020
+ARG GID=2020
+ARG FLAVOR=full
+ARG VERSION=unknown
+
+# GPU architecture (selects the premade recipe if one exists)
+ARG GPU_ARCH=gfx908
+# Override / supply for architectures without a premade recipe
+ARG ROCM_TARBALL_URL=""
+# pip requirement for the CuPy build: package spec, wheel URL or local path
+ARG CUPY_BUILD=""
+# Extra pip index that hosts AMD's ROCm CuPy builds
+ARG AMD_PYPI_INDEX=https://pypi.amd.com/rocm-10.0.0/simple/
+
+ENV GPU_ARCH=${GPU_ARCH} \
+    XSUITE_CONTAINER_VERSION="${VERSION}-${FLAVOR}-rocm-${GPU_ARCH}"
+
+# Resolve the recipe for GPU_ARCH first so a bad combination fails fast
+RUN set -eu; \
+    case "${GPU_ARCH}" in \
+        gfx908) \
+            DEF_ROCM="https://stable.repo.amd.com/rocm/core/tarball/therock-dist-linux-gfx908-10.2.0.tar.gz"; \
+            DEF_CUPY="amd-cupy" ;; \
+        gfx906) \
+            DEF_ROCM="https://nightly.repo.amd.com/rocm/core/tarball/therock-dist-linux-gfx906-10.3.0a20261031.tar.gz"; \
+            DEF_CUPY="amd-cupy" ;; \
+        *) \
+            DEF_ROCM=""; DEF_CUPY="" ;; \
+    esac; \
+    RES_ROCM="${ROCM_TARBALL_URL:-$DEF_ROCM}"; \
+    RES_CUPY="${CUPY_BUILD:-$DEF_CUPY}"; \
+    if [ -z "$RES_ROCM" ] || [ -z "$RES_CUPY" ]; then \
+        echo "ERROR: no premade recipe for GPU_ARCH='${GPU_ARCH}'." >&2; \
+        echo "       Premade: gfx908, gfx906. For other architectures pass both" >&2; \
+        echo "       --build-arg ROCM_TARBALL_URL=<TheRock tarball for ${GPU_ARCH}>" >&2; \
+        echo "       --build-arg CUPY_BUILD=<matching CuPy pip spec / wheel URL>" >&2; \
+        exit 1; \
+    fi; \
+    if [ -n "$DEF_ROCM" ] && { [ -n "${ROCM_TARBALL_URL}" ] || [ -n "${CUPY_BUILD}" ]; }; then \
+        echo "NOTE: overriding the premade ${GPU_ARCH} recipe - make sure ROCm and CuPy match."; \
+    fi; \
+    { printf 'RES_ROCM=%s\n' "'$RES_ROCM'"; printf 'RES_CUPY=%s\n' "'$RES_CUPY'"; } > /etc/xsuite-rocm-recipe; \
+    cat /etc/xsuite-rocm-recipe
+
+RUN groupadd -g ${GID} xsuiteuser \
+ && useradd -m -u ${UID} -g ${GID} -s /bin/bash xsuiteuser
+
+# Build deps + ROCm runtime deps + OpenCL loader / clFFT (for gpyfft)
+RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+    wget bzip2 ca-certificates curl git gcc g++ build-essential perl cmake \
+    libssl-dev libnuma1 libnuma-dev libatomic1 libquadmath0 \
+    ocl-icd-libopencl1 ocl-icd-opencl-dev opencl-headers clinfo libclfft-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install ROCm from the TheRock tarball (streamed, no temp copy)
+RUN set -eux; \
+    . /etc/xsuite-rocm-recipe; \
+    mkdir -p /opt/rocm; \
+    echo "Fetching ROCm: ${RES_ROCM}"; \
+    curl -fsSL "${RES_ROCM}" | tar -xz -C /opt/rocm; \
+    # sanity check: the tarball must really target GPU_ARCH
+    ls /opt/rocm/lib/rocblas/library | grep -q "${GPU_ARCH}" \
+        || { echo "No ${GPU_ARCH} rocBLAS kernels in this tarball!" >&2; exit 1; }; \
+    # make ROCm libs visible to the dynamic linker
+    printf '/opt/rocm/lib\n/opt/rocm/lib64\n/opt/rocm/extras/lib\n' > /etc/ld.so.conf.d/rocm.conf; \
+    ldconfig; \
+    # register the ROCm OpenCL runtime with the ICD loader (for pyopencl)
+    mkdir -p /etc/OpenCL/vendors; \
+    OCL_LIB="$(find /opt/rocm -name 'libamdocl64.so*' | head -n1 || true)"; \
+    if [ -n "${OCL_LIB}" ]; then \
+        echo "${OCL_LIB}" > /etc/OpenCL/vendors/amdocl64.icd; \
+    else \
+        echo "WARNING: libamdocl64.so not found in tarball - OpenCL context will be unavailable"; \
+    fi; \
+    clinfo -l || true
+
+ENV ROCM_PATH=/opt/rocm \
+    ROCM_HOME=/opt/rocm \
+    HIP_PATH=/opt/rocm \
+    HIPCC=/opt/rocm/bin/hipcc \
+    HIPCXX=/opt/rocm/lib/llvm/bin/clang \
+    CMAKE_PREFIX_PATH=/opt/rocm \
+    LD_LIBRARY_PATH=/opt/rocm/extras/lib:/opt/rocm/lib:/opt/rocm/lib64
+
+RUN chown -R xsuiteuser:xsuiteuser /home/xsuiteuser && \
+    chmod 2775 /home/xsuiteuser && \
+    umask 002 && \
+    mkdir -p /home/xsuiteuser/.cache && \
+    chown -R xsuiteuser:xsuiteuser /home/xsuiteuser/.cache && \
+    mkdir -p /home/xsuiteuser/.local/bin && \
+    chown -R xsuiteuser:xsuiteuser /home/xsuiteuser/.local
+
+USER xsuiteuser
+WORKDIR /home/xsuiteuser
+
+ENV ENV_PREFIX=/home/xsuiteuser/xsuite-env
+# micromamba needs a “root prefix” for caches / pkgs (can be small, but must exist)
+ENV MAMBA_ROOT_PREFIX=/home/xsuiteuser/.micromamba
+
+# put the env first on PATH, then ROCm tools
+ENV PATH=$ENV_PREFIX/bin:/home/xsuiteuser/.local/bin:/opt/rocm/extras/bin:/opt/rocm/bin:/opt/rocm/lib/llvm/bin:$PATH \
+    PIP_NO_CACHE_DIR=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1 \
+    # Ensure default shell is bash and that we are always inside the micromamba environment
+    SHELL=/bin/bash \
+    BASH_ENV=/home/xsuiteuser/.bash_env_mamba
+
+# install micromamba (arch-aware) + create required dirs
+RUN set -eux; \
+    umask 002; \
+    ARCH="$(uname -m)"; \
+    case "$ARCH" in \
+        x86_64|amd64)  MM_ARCH="64" ;; \
+        aarch64|arm64) MM_ARCH="aarch64" ;; \
+        *) echo "Unsupported arch: $ARCH"; exit 1 ;; \
+    esac; \
+    mkdir -p "$MAMBA_ROOT_PREFIX" "$(dirname "$ENV_PREFIX")"; \
+    wget -qO- "https://micro.mamba.pm/api/micromamba/linux-${MM_ARCH}/latest" \
+      | tar -xj -C /home/xsuiteuser/.local/bin --strip-components=1 bin/micromamba; \
+    /home/xsuiteuser/.local/bin/micromamba --version
+
+COPY --chown=xsuiteuser:xsuiteuser ./envs/${FLAVOR}.yaml /tmp/env.yaml
+
+# Create env directly at prefix, then add the ROCm GPU stack
+RUN set -eux; \
+    umask 002; \
+    . /etc/xsuite-rocm-recipe; \
+    PIP_VERBOSE=1 micromamba create -y -p "$ENV_PREFIX" -f /tmp/env.yaml && \
+    # ocl-icd-system makes the env's OpenCL loader read /etc/OpenCL/vendors (ROCm ICD)
+    micromamba install -y -p "$ENV_PREFIX" -c conda-forge pyopencl ocl-icd-system cython mako && \
+    # CuPy built for ROCm (premade: amd-cupy from AMD's index)
+    micromamba run -p "$ENV_PREFIX" pip install "${RES_CUPY}" --extra-index-url="${AMD_PYPI_INDEX}" && \
+    # gpyfft (OpenCL FFT) against the system clFFT
+    git clone --depth 1 https://github.com/geggo/gpyfft.git /tmp/gpyfft && \
+    micromamba run -p "$ENV_PREFIX" pip install --no-build-isolation /tmp/gpyfft && \
+    rm -rf /tmp/gpyfft && \
+    micromamba run -p "$ENV_PREFIX" python -c "import cupy; print('cupy', cupy.__version__, 'HIP:', cupy.cuda.runtime.is_hip)" && \
+    micromamba clean -a -f -y && \
+    # extra trimming
+    find "$ENV_PREFIX" -type f -name '*.a' -delete && \
+    find "$ENV_PREFIX" -type f -name '*.pyc' -delete && \
+    find "$ENV_PREFIX" -type d -name '__pycache__' -prune -exec rm -rf {} + && \
+    rm -f /tmp/env.yaml && \
+    printf '%s\n' \
+        'eval "$(micromamba shell hook --shell bash)"' \
+        'micromamba activate /home/xsuiteuser/xsuite-env >/dev/null 2>&1 || true' \
+        > /home/xsuiteuser/.bash_env_mamba \
+    && echo 'source /home/xsuiteuser/.bash_env_mamba' >> /home/xsuiteuser/.bashrc
+
+ENV CONDA_PREFIX=$ENV_PREFIX \
+    CONDA_DEFAULT_ENV=$ENV_PREFIX
