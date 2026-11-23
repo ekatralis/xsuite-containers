@@ -75,12 +75,24 @@ RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-ins
     ocl-icd-libopencl1 ocl-icd-opencl-dev opencl-headers clinfo libclfft-dev \
     && rm -rf /var/lib/apt/lists/*
 
-# Install ROCm from the TheRock tarball (streamed, no temp copy)
+# Install ROCm from the TheRock tarball.
+# Some rootless podman/buildah setups have a seccomp profile that rejects the
+# syscall tar uses to chmod symlinks/dirs ("Cannot change mode ... Operation
+# not permitted"). Contents still extract fine, so tolerate *only* those
+# errors and then normalise permissions ourselves with plain chmod.
 RUN set -eux; \
     . /etc/xsuite-rocm-recipe; \
     mkdir -p /opt/rocm; \
     echo "Fetching ROCm: ${RES_ROCM}"; \
-    curl -fsSL "${RES_ROCM}" | tar -xz -C /opt/rocm; \
+    curl -fsSL -o /tmp/rocm.tar.gz "${RES_ROCM}"; \
+    if ! tar -xzf /tmp/rocm.tar.gz -C /opt/rocm --no-same-owner --no-same-permissions 2>/tmp/tar.err; then \
+        if grep -v -e 'Cannot change mode' -e 'Exiting with failure status' /tmp/tar.err | grep -q .; then \
+            cat /tmp/tar.err >&2; exit 1; \
+        fi; \
+        echo "WARNING: tar could not set some modes (seccomp); fixing permissions manually"; \
+    fi; \
+    rm -f /tmp/rocm.tar.gz /tmp/tar.err; \
+    chmod -R u+rwX,go+rX /opt/rocm; \
     # sanity check: the tarball must really target GPU_ARCH
     ls /opt/rocm/lib/rocblas/library | grep -q "${GPU_ARCH}" \
         || { echo "No ${GPU_ARCH} rocBLAS kernels in this tarball!" >&2; exit 1; }; \
