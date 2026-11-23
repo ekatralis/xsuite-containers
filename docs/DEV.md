@@ -94,6 +94,16 @@ default_sysctls = []
 EOF
 ```
 
+### Using ROCm container with AMD GPUs:
+To run the ROCm container you must add the AMD devices and the groups `video` and `render`. You must also add the AMD GPUs to the container via the `--device` arguments. AMD also recommends running with `--security-opt seccomp=undefined` as some ROCm tools require systemcalls that would otherwise be blocked. A command therefore becomes:
+```
+podman run --rm -it \
+  --device /dev/kfd --device /dev/dri \
+  --group-add keep-groups \
+  --security-opt seccomp=unconfined \
+  localhost/xsuite-rocm bash
+```
+
 ## Developing using DevContainers
 Using this container to develop is really simple. Inside your repository, you can define the file:
 ```text
